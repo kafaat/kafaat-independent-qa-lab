@@ -74,7 +74,7 @@ class LiveHTTPAcceptanceTests(unittest.TestCase):
                 self.assertEqual(probe.returncode, 0, probe.stdout + probe.stderr)
                 result = json.loads(probe.stdout.strip().splitlines()[-1])
                 self.assertEqual(result['status'], 'PASSED')
-                self.assertEqual(len(result['checks']), 15)
+                self.assertEqual(len(result['checks']), 23)
                 self.assertTrue(all(item['passed'] for item in result['checks']))
                 self.assertEqual(len(result['event_ids']), 2)
                 with psycopg.connect(dsn) as db:
