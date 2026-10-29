@@ -1,0 +1,20 @@
+{
+  "project": "qa-public-docs",
+  "documents": [
+    {
+      "document_id": "service-boundary",
+      "path": "docs/BOUNDARY.md",
+      "git_blob_sha": "432402a459b6eec6dc76660fc5c3b36a2fb722f3"
+    },
+    {
+      "document_id": "postgres-acceptance",
+      "path": "docs/POSTGRES_ACCEPTANCE.md",
+      "git_blob_sha": "9ebd0e700bdc725b45af8ee10f7bd0ebda87ed19"
+    },
+    {
+      "document_id": "legacy-parity-requirements",
+      "path": "docs/LEGACY_PARITY_EVIDENCE_REQUIREMENTS.md",
+      "git_blob_sha": "0c69feca4abbec41ddbc956d6b87dfb3fc19bce1"
+    }
+  ]
+}
