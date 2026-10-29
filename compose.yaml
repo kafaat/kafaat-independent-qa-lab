@@ -1,0 +1,52 @@
+services:
+  api:
+    build: .
+    command: ["python", "-m", "qa_lab", "--data-dir", "/data", "serve"]
+    environment:
+      QA_API_TOKEN: "${QA_API_TOKEN:?Set QA_API_TOKEN}"
+      QA_BIND_HOST: "0.0.0.0"
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - qa-data:/data
+    networks: [qa-internal]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  worker:
+    build: .
+    command: ["python", "-m", "qa_lab.worker", "--data-dir", "/data", "--workspace", "/workspace"]
+    environment:
+      QA_REQUIRE_GIT_SHA: "1"
+    volumes:
+      - qa-data:/data
+      - ./workspace:/workspace:ro
+    networks: [qa-internal]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  evidence:
+    build: .
+    command: ["python", "-m", "qa_lab.evidence_service"]
+    environment:
+      QA_API_TOKEN: "${QA_API_TOKEN:?Set QA_API_TOKEN}"
+      QA_DATA_DIR: /data
+    volumes:
+      - qa-data:/data:ro
+    networks: [qa-internal]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  triage:
+    build: .
+    command: ["python", "-m", "qa_lab.triage_service"]
+    environment:
+      QA_API_TOKEN: "${QA_API_TOKEN:?Set QA_API_TOKEN}"
+      QA_DATA_DIR: /data
+    volumes:
+      - qa-data:/data:ro
+    networks: [qa-internal]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+networks:
+  qa-internal:
+    internal: true
+volumes:
+  qa-data:
