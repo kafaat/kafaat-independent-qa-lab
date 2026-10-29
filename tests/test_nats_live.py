@@ -65,3 +65,31 @@ class NATSJetStreamLiveTests(unittest.TestCase):
         finally:
             with psycopg.connect(DSN) as db:
                 db.execute('DELETE FROM qa_inbox WHERE event_id=%s',(uuid.UUID(eid),))
+
+    def test_idle_timeout_then_next_message(self):
+        asyncio.run(self._idle_timeout_then_next_message())
+
+    async def _idle_timeout_then_next_message(self):
+        import nats
+        from nats.js.api import StreamConfig, StorageType
+        from qa_lab.nats_consumer import fetch_idle_safe
+        nc=await nats.connect(URL,connect_timeout=5)
+        js=nc.jetstream()
+        stream='QA_IDLE_'+uuid.uuid4().hex[:12].upper()
+        subject='qa.idle.'+uuid.uuid4().hex
+        try:
+            await js.add_stream(config=StreamConfig(
+                name=stream,subjects=[subject],storage=StorageType.MEMORY))
+            sub=await js.pull_subscribe(subject,durable='idle-test',stream=stream)
+            self.assertEqual(await fetch_idle_safe(sub,timeout=0.25),[])
+            event={'event_id':str(uuid.uuid4()),'payload':{'run_id':'idle-test'}}
+            await js.publish(subject,json.dumps(event).encode())
+            batch=await fetch_idle_safe(sub,timeout=4)
+            self.assertEqual(len(batch),1)
+            self.assertEqual(json.loads(batch[0].data),event)
+            await batch[0].ack()
+        finally:
+            try:
+                await js.delete_stream(stream)
+            finally:
+                await nc.close()
