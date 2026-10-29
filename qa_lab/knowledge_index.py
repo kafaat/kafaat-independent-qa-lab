@@ -173,13 +173,15 @@ class KnowledgeIndex:
         counts = [Counter(tokens(row['text'])) for row in rows]
         lengths = [sum(count.values()) for count in counts]
         avg = sum(lengths) / max(len(lengths), 1) or 1
+        query_terms = set(tokens(query))
+        frequencies = Counter(term for count in counts for term in query_terms.intersection(count))
         lexical = []
         for i, count in enumerate(counts):
             score = 0.0
-            for term in set(tokens(query)):
+            for term in query_terms.intersection(count):
                 tf = count[term]
                 if tf:
-                    df = sum(term in item for item in counts)
+                    df = frequencies[term]
                     idf = math.log(1 + (len(rows) - df + .5) / (df + .5))
                     score += idf * tf * 2.2 / (tf + 1.2 * (.25 + .75 * lengths[i] / avg))
             if score > 0:
