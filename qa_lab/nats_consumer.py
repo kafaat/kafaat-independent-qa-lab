@@ -6,6 +6,14 @@ import psycopg
 import nats
 from .nats_inbox import INBOX_SCHEMA, accept_event
 
+async def fetch_idle_safe(subscription, *, timeout=2):
+    """Normal empty JetStream polls can raise asyncio.TimeoutError in nats-py."""
+    try:
+        return await subscription.fetch(batch=10, timeout=timeout)
+    except (asyncio.TimeoutError, nats.errors.TimeoutError):
+        return []
+
+
 async def run():
     dsn=os.environ['QA_POSTGRES_DSN']
     nc=await nats.connect(os.environ.get('QA_NATS_URL','nats://nats:4222'))
@@ -20,8 +28,7 @@ async def run():
     sub=await js.pull_subscribe('qa.jobs.*',durable='qa-audit-inbox',stream='QA_JOBS')
     try:
         while True:
-            try: messages=await sub.fetch(batch=10,timeout=2)
-            except nats.errors.TimeoutError:continue
+            messages=await fetch_idle_safe(sub)
             for msg in messages:
                 try:
                     event=json.loads(msg.data)
