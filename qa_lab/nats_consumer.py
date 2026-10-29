@@ -1,10 +1,10 @@
 """JetStream durable consumer: ack only after PostgreSQL transaction commits."""
 import asyncio
-import json
 import os
 import psycopg
 import nats
-from .nats_inbox import INBOX_SCHEMA, accept_event
+from .nats_inbox import INBOX_SCHEMA
+from .nats_rejections import REJECTION_SCHEMA, handle_delivery
 
 async def fetch_idle_safe(subscription, *, timeout=2):
     """Normal empty JetStream polls can raise asyncio.TimeoutError in nats-py."""
@@ -18,7 +18,9 @@ async def run():
     dsn=os.environ['QA_POSTGRES_DSN']
     nc=await nats.connect(os.environ.get('QA_NATS_URL','nats://nats:4222'))
     js=nc.jetstream()
-    with psycopg.connect(dsn) as db:db.execute(INBOX_SCHEMA)
+    with psycopg.connect(dsn) as db:
+        db.execute(INBOX_SCHEMA)
+        db.execute(REJECTION_SCHEMA)
     from nats.js.api import StreamConfig, StorageType, RetentionPolicy
     from nats.js.errors import NotFoundError
     try:
@@ -30,17 +32,7 @@ async def run():
         while True:
             messages=await fetch_idle_safe(sub)
             for msg in messages:
-                try:
-                    event=json.loads(msg.data)
-                    with psycopg.connect(dsn) as db:
-                        with db.transaction():
-                            accept_event(db,msg.subject,event)
-                    await msg.ack()
-                except (ValueError,TypeError,json.JSONDecodeError):
-                    # Invalid payloads require explicit review, not an ACK-as-success.
-                    await msg.term()
-                except Exception:
-                    await msg.nak()
+                await handle_delivery(msg, lambda: psycopg.connect(dsn))
     finally:
         await nc.drain()
 

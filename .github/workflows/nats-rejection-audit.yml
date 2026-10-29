@@ -1,0 +1,87 @@
+name: NATS rejection audit
+on:
+  pull_request:
+  push:
+    branches: [main, 'fix/nats-rejection-audit']
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Require all 29 local behavioural cases
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          unraisable = []
+          sys.unraisablehook = lambda item: unraisable.append(type(item.exc_value).__name__)
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_nats_rejection_audit.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or unraisable or result.testsRun != 29:
+              raise SystemExit('Incomplete rejection audit regression')
+          PY
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: qa
+          POSTGRES_PASSWORD: qa-disposable-ci-only
+          POSTGRES_DB: qa_audit_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U qa -d qa_audit_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      QA_TEST_POSTGRES_DSN: postgresql://qa:qa-disposable-ci-only@127.0.0.1:5432/qa_audit_test
+      QA_NATS_URL: nats://127.0.0.1:4222
+      QA_REJECTION_AUDIT_LIVE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install integration clients
+        run: python -m pip install 'psycopg[binary]>=3,<4' 'nats-py>=2.7,<3'
+      - name: Start isolated JetStream
+        run: |
+          docker run -d --name qa-audit-nats -p 127.0.0.1:4222:4222 nats:2.10-alpine -js
+          python - <<'PY'
+          import socket, time
+          for _ in range(30):
+              try:
+                  with socket.create_connection(('127.0.0.1', 4222), timeout=1):
+                      break
+              except OSError:
+                  time.sleep(1)
+          else:
+              raise SystemExit('JetStream did not start')
+          PY
+      - name: Require three real broker and database cases, no skips
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          unraisable = []
+          sys.unraisablehook = lambda item: unraisable.append(type(item.exc_value).__name__)
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_nats_rejection_audit_live.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or unraisable or result.testsRun != 3:
+              raise SystemExit('Incomplete live rejection audit acceptance')
+          PY
+      - name: Dispose isolated broker
+        if: always()
+        run: |
+          docker logs qa-audit-nats || true
+          docker rm -f qa-audit-nats || true
