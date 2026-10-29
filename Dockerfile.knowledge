@@ -1,0 +1,14 @@
+# Read-only index of reviewed, public QA documents. No LLM.
+FROM python:3.12-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
+    QA_KNOWLEDGE_DB=/app/knowledge.sqlite \
+    QA_BIND_HOST=0.0.0.0 PORT=8781 \
+    QA_KNOWLEDGE_SCOPE='{"project":"qa-public-docs","sources":{"service-boundary":"432402a459b6eec6dc76660fc5c3b36a2fb722f3","postgres-acceptance":"9ebd0e700bdc725b45af8ee10f7bd0ebda87ed19","legacy-parity-requirements":"0c69feca4abbec41ddbc956d6b87dfb3fc19bce1"}}'
+WORKDIR /app
+COPY qa_lab /app/qa_lab
+COPY docs/BOUNDARY.md docs/POSTGRES_ACCEPTANCE.md docs/LEGACY_PARITY_EVIDENCE_REQUIREMENTS.md docs/QA_KNOWLEDGE_SEED.json /app/docs/
+RUN python -m qa_lab.knowledge_seed --root /app --manifest /app/docs/QA_KNOWLEDGE_SEED.json --output /app/knowledge.sqlite && \
+    groupadd --system qa && useradd --system --gid qa --home /nonexistent qa && chmod 0444 /app/knowledge.sqlite
+USER qa
+EXPOSE 8781
+CMD ["python", "-m", "qa_lab.knowledge_service"]
