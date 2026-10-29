@@ -1,0 +1,9 @@
+[build-system]
+requires = ['setuptools>=61']
+build-backend = 'setuptools.build_meta'
+[project]
+name = 'kafaat-independent-qa-lab'
+version = '0.5.2'
+requires-python = '>=3.10'
+[tool.setuptools.packages.find]
+include = ['qa_lab*']
