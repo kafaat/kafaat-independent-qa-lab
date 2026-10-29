@@ -70,19 +70,30 @@ def vector(value):
 
 
 class KnowledgeIndex:
-    def __init__(self, path):
+    def __init__(self, path, *, read_only=False):
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with closing(self.connect()) as db, db:
-            db.execute(SCHEMA)
+        self.read_only = read_only
+        if read_only:
+            # A reader must not silently create an empty index and report healthy.
+            if self.path.is_symlink() or not self.path.is_file():
+                raise ValueError('existing regular knowledge index required')
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with closing(self.connect()) as db, db:
+                db.execute(SCHEMA)
 
     def connect(self):
-        db = sqlite3.connect(self.path, timeout=5)
+        if self.read_only:
+            db = sqlite3.connect(self.path.resolve().as_uri() + '?mode=ro', uri=True, timeout=5)
+        else:
+            db = sqlite3.connect(self.path, timeout=5)
         db.row_factory = sqlite3.Row
         return db
 
     def ingest(self, *, project, document_id, source_sha, text,
                chunk_size=1000, embedder=None, embedding_model=None):
+        if self.read_only:
+            raise ValueError('knowledge index is read-only')
         project, document_id = label(project), label(document_id)
         source_sha = source_ref(source_sha)
         if not isinstance(text, str) or not text.strip():
@@ -139,7 +150,9 @@ class KnowledgeIndex:
         if not isinstance(source_versions, dict) or not 1 <= len(source_versions) <= 100:
             raise ValueError('explicit source versions required')
         rows = []
-        with closing(self.connect()) as db:
+        with closing(self.connect()) as db, db:
+            # All selected documents are observed in one read transaction.
+            db.execute('BEGIN')
             for document_id, sha in source_versions.items():
                 label(document_id)
                 source_ref(sha)
@@ -152,7 +165,36 @@ class KnowledgeIndex:
         for row in records:
             if digest({key: row[key] for key in FIELDS}) != row['integrity_sha256']:
                 raise ValueError('knowledge integrity failure')
+        # A valid surviving chunk hash does not prove the whole document survived.
+        # Check every selected document, even when its text would not match the query.
+        from itertools import groupby
+        for _, grouped in groupby(records, key=lambda row: (row['document_id'], row['source_sha'])):
+            document = list(grouped)
+            expected_hash = document[0]['document_sha256']
+            offset = 0
+            hasher = hashlib.sha256()
+            for ordinal, row in enumerate(document):
+                if (row['ordinal'] != ordinal or row['offset_start'] != offset
+                        or not isinstance(row['text'], str) or not row['text']
+                        or row['offset_end'] != offset + len(row['text'])
+                        or row['document_sha256'] != expected_hash):
+                    raise ValueError('knowledge document completeness failure')
+                try:
+                    hasher.update(row['text'].encode('utf-8'))
+                except UnicodeError:
+                    raise ValueError('knowledge document encoding failure') from None
+                offset = row['offset_end']
+            if hasher.hexdigest() != expected_hash:
+                raise ValueError('knowledge document completeness failure')
         return records
+
+    def verify_scope(self, *, project, source_versions):
+        """Require all pinned documents at service startup; never substitute versions."""
+        records = self._scoped(project, source_versions)
+        found = {row['document_id'] for row in records}
+        if found != set(source_versions):
+            raise ValueError('missing pinned knowledge source')
+        return {'documents': len(found), 'chunks': len(records)}
 
     def retrieve(self, query, *, project, source_versions, limit=5,
                  query_vector=None, embedding_model=None, min_cosine=0.5):

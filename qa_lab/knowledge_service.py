@@ -8,6 +8,16 @@ from .knowledge_index import KnowledgeIndex
 from .pg_dashboard import Dashboard, valid_token
 
 
+def unique_object(pairs):
+    """Reject ambiguous JSON objects, including duplicate query/limit keys."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate JSON key')
+        result[key] = value
+    return result
+
+
 class KnowledgeHandler(Dashboard):
     index = None
     scope = None
@@ -42,7 +52,7 @@ class KnowledgeHandler(Dashboard):
             raw = self.rfile.read(length)
             if len(raw) != length:
                 raise ValueError('truncated request')
-            body = json.loads(raw)
+            body = json.loads(raw, object_pairs_hook=unique_object)
             if not isinstance(body, dict) or set(body) - {'query', 'limit'} or 'query' not in body:
                 raise ValueError('invalid query contract')
             method = self.index.answer if self.path == '/v1/answer' else self.index.retrieve
@@ -58,11 +68,11 @@ class KnowledgeHandler(Dashboard):
 def main():
     if not valid_token(os.environ.get('QA_KNOWLEDGE_TOKEN', '')):
         raise RuntimeError('valid QA_KNOWLEDGE_TOKEN required')
-    scope = json.loads(os.environ['QA_KNOWLEDGE_SCOPE'])
+    scope = json.loads(os.environ['QA_KNOWLEDGE_SCOPE'], object_pairs_hook=unique_object)
     if not isinstance(scope, dict) or set(scope) != {'project', 'sources'}:
         raise ValueError('server-side project and source scope required')
-    index = KnowledgeIndex(os.environ['QA_KNOWLEDGE_DB'])
-    index._scoped(scope['project'], scope['sources'])  # Fail at startup on an invalid/tampered scope.
+    index = KnowledgeIndex(os.environ['QA_KNOWLEDGE_DB'], read_only=True)
+    index.verify_scope(project=scope['project'], source_versions=scope['sources'])  # Fail at startup on an invalid/tampered scope.
     handler = type('ScopedKnowledge', (KnowledgeHandler,), {'index': index, 'scope': scope})
     with ThreadingHTTPServer((os.environ.get('QA_BIND_HOST', '127.0.0.1'),
                               int(os.environ.get('PORT', '8781'))), handler) as server:

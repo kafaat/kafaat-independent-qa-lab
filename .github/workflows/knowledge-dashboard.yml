@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Six behavioural suites; no skipped or unraisable errors
+      - name: Six behavioural suites plus completeness; no skipped or unraisable errors
         run: |
           PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
           import gc, sys, unittest
@@ -27,9 +27,10 @@ jobs:
                     'dashboard_query', 'dashboard_http', 'parity_report')
           loader = unittest.TestLoader()
           suite = unittest.TestSuite(loader.discover('tests', pattern='test_' + g + '_v2.py') for g in groups)
+          suite.addTests(loader.discover('tests', pattern='test_knowledge_integrity_v3.py'))
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           gc.collect()
-          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 57:
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 79:
               raise SystemExit('Incomplete behavioural validation: ' + repr(errors))
           PY
   dashboard-postgres:
