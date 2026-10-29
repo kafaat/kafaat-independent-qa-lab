@@ -32,3 +32,7 @@ rejected and must be rebuilt from its pinned source rather than auto-repaired.
 Hashes detect inconsistent data, not a malicious writer that rewrites all data
 and hashes. No signatures, new embedding model, LLM generation, source execution,
 project ACLs, or whole-capability legacy parity are claimed.
+
+## Follow-up: runtime query correction for wholly missing pinned documents
+
+A completely deleted pinned document previously yielded `INSUFFICIENT_EVIDENCE` during `retrieve` even though startup `verify_scope` rejected it. The query now requires every selected `(document_id, source_sha)` to exist before scoring. Two additional executable regressions prove whole-source deletion and a missing second pinned document cannot silently return a partial answer. The knowledge/dashboard workflow now requires 81 behavioural cases on each of Python 3.12 and 3.13. This guards index completeness only; it does not provide host signatures, a neural model, user ACLs or full legacy parity.
