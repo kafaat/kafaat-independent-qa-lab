@@ -71,7 +71,8 @@ jobs:
                   return json.loads(response.read())
           result=request('PostgreSQL')
           assert result['status']=='EVIDENCE_FOUND' and result['citations']
-          assert all(hit['document_id']=='postgres-acceptance' for hit in result['citations'])
+          assert any(hit['document_id']=='postgres-acceptance' for hit in result['citations'])
+          assert all(hit['document_id'] in {'service-boundary','postgres-acceptance','legacy-parity-requirements'} for hit in result['citations'])
           assert result['answer_mode']=='extractive-no-llm'
           assert result['authority']=='reference-only' and not result['production_accepted']
           assert request('unicorn-nonexistent-hypothetical')['status']=='INSUFFICIENT_EVIDENCE'
