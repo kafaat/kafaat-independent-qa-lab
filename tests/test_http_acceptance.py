@@ -30,9 +30,9 @@ def server(handler):
 
 
 class ProbeHTTPTests(unittest.TestCase):
-    def scenario(self, *, insecure=False, observer_error=False):
+    def scenario(self, *, insecure=False, observer_error=False, forged_dashboard=False, legacy_dashboard=False):
         rid = str(uuid.uuid4())
-        state = {'request': None, 'posts': 0}
+        state = {'request': None, 'posts': 0, 'events': []}
 
         class FakeAPI(BaseHTTPRequestHandler):
             def log_message(self, *args):
@@ -58,14 +58,39 @@ class ProbeHTTPTests(unittest.TestCase):
                     return self.reply(401, {})
                 if self.path == '/':
                     return self.reply(200, '<html>' + rid + ' PASSED</html>', html=True)
+                if self.path.startswith('/api/runs'):
+                    if legacy_dashboard:
+                        return self.reply(404, {'error': 'not_found'})
+                    if self.path.startswith('/api/runs?'):
+                        if 'UNRECOGNIZED' in self.path:
+                            return self.reply(400, {'error': 'invalid_request'})
+                        return self.reply(200, {'runs': [{'run_id': rid, 'status': 'PASSED'}],
+                                                'authority': 'read-only', 'next_cursor': None})
+                    if self.path == '/api/runs':
+                        return self.reply(200, {'runs': [{'run_id': rid, 'status': 'PASSED'}],
+                                                'authority': 'read-only', 'next_cursor': None})
+                    if self.path == '/api/runs/' + rid:
+                        event_rows = state['events']
+                        events = [{'event_id': ('forged' if forged_dashboard else row[0]),
+                                   'subject': row[1], 'published': True, 'received': True,
+                                   'payload_matches': True} for row in event_rows]
+                        return self.reply(200, {'run_id': rid, 'status': 'PASSED',
+                                                'project': 'http-acceptance', 'recipe': 'python-smoke',
+                                                'authority': 'read-only', 'events': events,
+                                                'source_attestation': 'request-reference-only',
+                                                'requested_source_sha': SOURCE,
+                                                'production_accepted': False})
+                    return self.reply(404, {'error': 'not_found'})
                 return self.reply(200, {'run_id': rid, 'status': 'PASSED', 'receipt': {
                     'status': 'PASSED', 'exit_code': 0, 'stdout_tail': 'qa-smoke-ok\n',
                     'source_sha': SOURCE, 'authority': 'execution-evidence-only'}})
 
             def do_POST(self):
-                body = self.rfile.read(int(self.headers['Content-Length']))
                 if not self.auth():
                     return self.reply(401, {})
+                if self.path.startswith('/api/runs'):
+                    return self.reply(405, {'error': 'read_only'})
+                body = self.rfile.read(int(self.headers['Content-Length']))
                 req = json.loads(body)
                 if req['recipe'] != 'python-smoke':
                     return self.reply(400, {'error': 'recipe not allowed'})
@@ -80,8 +105,9 @@ class ProbeHTTPTests(unittest.TestCase):
             self.assertEqual(run_id, rid)
             if observer_error:
                 raise RuntimeError('sensitive upstream data must not be copied')
-            return [(str(uuid.uuid4()), subject, {'run_id': rid}, 'published', subject, {'run_id': rid})
-                    for subject in ('qa.jobs.created', 'qa.jobs.finished')]
+            state['events'] = [(str(uuid.uuid4()), subject, {'run_id': rid}, 'published', subject, {'run_id': rid})
+                               for subject in ('qa.jobs.created', 'qa.jobs.finished')]
+            return state['events']
 
         stored = []
         with server(FakeAPI) as url:
@@ -92,13 +118,25 @@ class ProbeHTTPTests(unittest.TestCase):
     def test_complete_http_acceptance_and_digest(self):
         result, stored = self.scenario()
         self.assertEqual(result['status'], 'PASSED')
-        self.assertEqual(len(result['checks']), 15)
+        self.assertEqual(len(result['checks']), 23)
         self.assertTrue(all(check['passed'] for check in result['checks']))
         self.assertEqual(stored[-1], result)
         unsigned = {key: value for key, value in result.items() if key != 'receipt_sha256'}
         self.assertEqual(hashlib.sha256(canonical(unsigned).encode()).hexdigest(), result['receipt_sha256'])
         self.assertNotIn(TOKEN, canonical(stored))
         self.assertEqual(result['source_attestation'], 'request-reference-only')
+
+    def test_legacy_dashboard_is_not_accepted_as_v2(self):
+        result, stored = self.scenario(legacy_dashboard=True)
+        self.assertEqual(result['status'], 'FAILED')
+        self.assertEqual(result['failure'], 'dashboard_json_invalid_filter_rejected')
+        self.assertNotIn(TOKEN, canonical(stored))
+
+    def test_forged_dashboard_event_is_rejected(self):
+        result, stored = self.scenario(forged_dashboard=True)
+        self.assertEqual(result['status'], 'FAILED')
+        self.assertEqual(result['failure'], 'dashboard_json_detail_matches_events')
+        self.assertNotIn(TOKEN, canonical(stored))
 
     def test_auth_bypass_fails_before_submission(self):
         result, stored = self.scenario(insecure=True)

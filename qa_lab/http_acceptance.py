@@ -224,6 +224,71 @@ def run_checks(config, observe, persist=lambda result: None, *, identity=None):
         check('dashboard_cache_headers', headers.get('Cache-Control') == 'no-store'
               and headers.get('X-Content-Type-Options') == 'nosniff')
         result['dashboard_sha256'] = hashlib.sha256(page).hexdigest()
+        # Dashboard v2 JSON endpoints must be verified on the deployed service,
+        # not inferred from the HTML table or separate CI-only database tests.
+        status, _, _ = call(config.dashboard, '/api/runs')
+        check('dashboard_json_no_token_rejected', status == 401)
+        status, _, _ = call(config.dashboard, '/api/runs', token='deliberately-wrong')
+        check('dashboard_json_wrong_token_rejected', status == 401)
+        status, _, _ = call(config.dashboard, '/api/runs/' + run_id)
+        check('dashboard_json_detail_no_token_rejected', status == 401)
+        status, _, _ = call(config.dashboard, '/api/runs?status=UNRECOGNIZED',
+                            token=config.dashboard_token)
+        check('dashboard_json_invalid_filter_rejected', status == 400)
+        status, _, _ = call(config.dashboard, '/api/runs', method='POST', token=config.dashboard_token)
+        check('dashboard_json_write_rejected', status == 405)
+
+        # UUID-keyset ordering is explicitly not chronological. Search bounded
+        # pages so other probes do not hide the current run from a first page.
+        path = '/api/runs?project=http-acceptance&status=PASSED&limit=100'
+        seen = set()
+        visible = False
+        for _ in range(20):
+            status, _, body = call(config.dashboard, path, token=config.dashboard_token)
+            listing = decode(body) if status == 200 else {}
+            listed = listing.get('runs')
+            if status != 200 or listing.get('authority') != 'read-only' or not isinstance(listed, list):
+                raise AcceptanceFailure('dashboard_json_listing_invalid')
+            if any(isinstance(item, dict) and item.get('run_id') == run_id
+                   and item.get('status') == 'PASSED' for item in listed):
+                visible = True
+                break
+            after = listing.get('next_cursor')
+            if after is None:
+                break
+            try:
+                if str(uuid.UUID(str(after))) != after or after in seen:
+                    raise ValueError('bad cursor')
+            except (ValueError, TypeError, AttributeError):
+                raise AcceptanceFailure('dashboard_json_cursor_invalid') from None
+            seen.add(after)
+            path = '/api/runs?project=http-acceptance&status=PASSED&limit=100&after=' + after
+        check('dashboard_json_filtered_run_visible', visible)
+
+        status, detail_headers, body = call(config.dashboard, '/api/runs/' + run_id,
+                                            token=config.dashboard_token)
+        detail = decode(body) if status == 200 else {}
+        events = detail.get('events')
+        event_integrity = (isinstance(events, list) and len(events) == 2
+                           and all(isinstance(event, dict) for event in events)
+                           and {event.get('event_id') for event in events} == set(result['event_ids'])
+                           and {event.get('subject') for event in events}
+                           == {'qa.jobs.created', 'qa.jobs.finished'}
+                           and all(event.get('published') is True
+                                   and event.get('received') is True
+                                   and event.get('payload_matches') is True for event in events))
+        check('dashboard_json_detail_matches_events', status == 200 and event_integrity
+              and detail.get('run_id') == run_id and detail.get('status') == 'PASSED'
+              and detail.get('project') == 'http-acceptance'
+              and detail.get('recipe') == 'python-smoke'
+              and detail.get('authority') == 'read-only'
+              and detail.get('source_attestation') == 'request-reference-only'
+              and detail.get('production_accepted') is False
+              and detail.get('requested_source_sha') == config.requested_source_sha)
+        check('dashboard_json_cache_headers', detail_headers.get('Cache-Control') == 'no-store'
+              and detail_headers.get('X-Content-Type-Options') == 'nosniff'
+              and detail_headers.get('Content-Type', '').startswith('application/json'))
+        result['dashboard_json_sha256'] = hashlib.sha256(body).hexdigest()
         result['status'] = 'PASSED'
     except Exception as exc:
         result['status'] = 'FAILED'
