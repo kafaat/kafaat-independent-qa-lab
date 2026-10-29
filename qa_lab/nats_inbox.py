@@ -28,4 +28,15 @@ def accept_event(conn, subject, event):
     row=conn.execute("""INSERT INTO qa_inbox(event_id,subject,payload)
         VALUES (%s,%s,%s::jsonb) ON CONFLICT(event_id) DO NOTHING RETURNING event_id""",
         (eid,subject,payload)).fetchone()
-    return row is not None
+    if row is not None:
+        return True
+    # A duplicate UUID alone does not prove a valid replay. The original
+    # subject and JSONB payload must agree before it is treated as idempotent.
+    previous=conn.execute('SELECT subject,payload FROM qa_inbox WHERE event_id=%s',
+                          (eid,)).fetchone()
+    if previous is None:
+        # A conflicting row invisible to this transaction is not an ACK.
+        raise ValueError('unverifiable duplicate event id')
+    if previous[0]!=subject or previous[1]!=json.loads(payload):
+        raise ValueError('event id collision')
+    return False

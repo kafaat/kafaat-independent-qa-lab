@@ -43,3 +43,25 @@ class NATSJetStreamLiveTests(unittest.TestCase):
                 db.execute('DELETE FROM qa_inbox WHERE event_id=%s',(uuid.UUID(eid),))
             try:await js.delete_stream(stream)
             finally:await nc.drain()
+
+    def test_event_id_collision_rejected_without_mutating_inbox(self):
+        import psycopg
+        eid=str(uuid.uuid4())
+        original={'event_id':eid,'payload':{'run_id':'identity','status':'PASSED'}}
+        try:
+            with psycopg.connect(DSN) as db:
+                db.execute(INBOX_SCHEMA)
+                self.assertTrue(accept_event(db,'qa.jobs.finished',original))
+            with psycopg.connect(DSN) as db:
+                self.assertFalse(accept_event(db,'qa.jobs.finished',original))
+                with self.assertRaisesRegex(ValueError,'event id collision'):
+                    accept_event(db,'qa.jobs.finished',{
+                        'event_id':eid,'payload':{'run_id':'forged','status':'PASSED'}})
+                with self.assertRaisesRegex(ValueError,'event id collision'):
+                    accept_event(db,'qa.jobs.created',original)
+                row=db.execute('SELECT subject,payload FROM qa_inbox WHERE event_id=%s',
+                               (uuid.UUID(eid),)).fetchone()
+                self.assertEqual(row,('qa.jobs.finished',original['payload']))
+        finally:
+            with psycopg.connect(DSN) as db:
+                db.execute('DELETE FROM qa_inbox WHERE event_id=%s',(uuid.UUID(eid),))
