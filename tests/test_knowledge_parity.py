@@ -17,7 +17,7 @@ class ParityTests(unittest.TestCase):
     def test_missing_receipts_are_not_run(self):
         cases=[{'id':'a','legacy_ref':'old','new_ref':'new'}]
         self.assertEqual(summary(evaluate(cases,{}))['NOT_RUN'],1)
-    def test_matching_receipts_verified(self):
+    def test_unpinned_placeholder_receipts_are_not_verified(self):
         cases=[{'id':'a','legacy_ref':'old','new_ref':'new'}]
         r={'input_digest':'x','output_digest':'y','status':'PASSED'}
-        self.assertEqual(evaluate(cases,{('a','legacy'):r,('a','new'):r})[0]['status'],'VERIFIED')
+        self.assertEqual(evaluate(cases,{('a','legacy'):r,('a','new'):r})[0]['status'],'NOT_RUN')
