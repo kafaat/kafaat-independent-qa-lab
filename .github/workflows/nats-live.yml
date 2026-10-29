@@ -39,6 +39,10 @@ jobs:
           done
           docker logs qa-nats-jetstream
           exit 1
+      - name: Verify NATS restart persistence
+        env:
+          QA_NATS_RESTART_TEST: '1'
+        run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_nats_restart.py' -v
       - name: Run real JetStream redelivery and inbox deduplication
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_nats_redelivery.py' -v
       - name: Run real JetStream publish and redelivery tests
