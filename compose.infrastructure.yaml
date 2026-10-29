@@ -1,0 +1,26 @@
+# Optional isolated infrastructure experiment; application services are not yet migrated.
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: qa
+      POSTGRES_DB: qa_lab
+      POSTGRES_PASSWORD: ${QA_POSTGRES_PASSWORD:?Set a strong database password}
+    volumes: [qa-postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa -d qa_lab"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [qa-internal]
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data"]
+    volumes: [qa-nats:/data]
+    networks: [qa-internal]
+networks:
+  qa-internal:
+    internal: true
+volumes:
+  qa-postgres:
+  qa-nats:
