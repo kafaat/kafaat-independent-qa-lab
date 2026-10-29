@@ -1,4 +1,4 @@
-# Built from the repository root; no external entrypoint wrapper.
 FROM nats:2.10-alpine
-ENTRYPOINT ["/nats-server"]
+# Preserve the upstream executable resolution rather than assuming /nats-server.
+ENTRYPOINT ["nats-server"]
 CMD ["-js", "-sd", "/data"]
