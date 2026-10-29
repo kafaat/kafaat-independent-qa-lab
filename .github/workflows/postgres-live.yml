@@ -36,6 +36,8 @@ jobs:
           PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_queue_live.py' -v
       - name: Verify child process exit recovery
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_process_recovery.py' -v
+      - name: Verify SIGKILL worker recovery
+        run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_sigkill_recovery.py' -v
       - name: Reject skipped integration tests
         run: |
           python - <<'PY'
