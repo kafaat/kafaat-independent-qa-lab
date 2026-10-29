@@ -15,7 +15,7 @@ jobs:
       - name: Verify image entrypoint and command
         run: |
           docker image inspect qa-nats:ci --format '{{json .Config.Entrypoint}} {{json .Config.Cmd}}'
-          test "$(docker image inspect qa-nats:ci --format '{{join .Config.Entrypoint " "}}')" = /nats-server
+          test "$(docker image inspect qa-nats:ci --format '{{join .Config.Entrypoint " "}}')" = nats-server
       - name: Start JetStream with persistent storage
         run: |
           docker volume create qa-nats-ci
