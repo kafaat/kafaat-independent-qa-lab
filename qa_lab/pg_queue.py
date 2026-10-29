@@ -95,4 +95,7 @@ RETURNING id,request""",(worker_id,)).fetchone()
             with db.transaction():
                 row=db.execute("UPDATE qa_jobs SET status=%s,receipt=%s::jsonb WHERE id=%s AND status='RUNNING' AND worker_id=%s RETURNING id",(status,data.decode('utf-8'),rid,worker_id)).fetchone()
                 if row is None:raise ValueError('run not owned or not running')
+                from .nats_outbox import OUTBOX_SCHEMA, enqueue
+                db.execute(OUTBOX_SCHEMA)
+                enqueue(db,'qa.jobs.finished',{'run_id':str(row[0]),'status':status})
                 return {'run_id':str(row[0]),'status':status}
