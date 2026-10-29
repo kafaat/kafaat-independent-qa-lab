@@ -1,0 +1,63 @@
+name: HTTP stack acceptance
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/http-acceptance-complete']
+permissions:
+  contents: read
+jobs:
+  http-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: qa
+          POSTGRES_PASSWORD: ci-only-disposable-password
+          POSTGRES_DB: qa_acceptance_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U qa -d qa_acceptance_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      QA_TEST_POSTGRES_DSN: postgresql://qa:ci-only-disposable-password@127.0.0.1:5432/qa_acceptance_test
+      QA_NATS_URL: nats://127.0.0.1:4222
+      QA_HTTP_ACCEPTANCE_LIVE: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install service clients
+        run: python -m pip install 'psycopg[binary]>=3,<4' 'nats-py>=2.7,<3'
+      - name: Start isolated JetStream
+        run: |
+          docker run -d --name qa-http-nats -p 127.0.0.1:4222:4222 nats:2.10-alpine -js
+          for i in $(seq 1 30); do
+            if bash -c 'echo > /dev/tcp/127.0.0.1/4222' 2>/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Test HTTP controls and actual service flow, forbid skipped tests
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          errors = []
+          sys.unraisablehook = lambda item: errors.append(type(item.exc_value).__name__)
+          loader = unittest.TestLoader()
+          suite = unittest.TestSuite([
+              loader.discover('tests', pattern='test_http_acceptance.py'),
+              loader.discover('tests', pattern='test_http_acceptance_live.py'),
+          ])
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 13:
+              raise SystemExit('HTTP acceptance incomplete or resource leak: ' + repr(errors))
+          PY
+      - name: Container diagnostics and cleanup
+        if: always()
+        run: |
+          docker logs qa-http-nats || true
+          docker rm -f qa-http-nats || true
