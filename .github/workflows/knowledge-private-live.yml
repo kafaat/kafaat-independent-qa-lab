@@ -1,0 +1,75 @@
+name: Private knowledge HTTP acceptance
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  probe-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Strict private probe contracts and actual loopback HTTP
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          errors = []
+          sys.unraisablehook = lambda item: errors.append(type(item.exc_value).__name__)
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_knowledge_live_probe.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 12:
+              raise SystemExit('Private knowledge probe contracts incomplete: ' + repr(errors))
+          PY
+  private-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact private knowledge image
+        run: docker build --file Dockerfile.knowledge --tag qa-knowledge:private-acceptance .
+      - name: Start authenticated service on a Docker-private bridge
+        run: |
+          docker network create qa-knowledge-acceptance
+          docker run -d --name qa-knowledge-service --network qa-knowledge-acceptance \
+            --network-alias qa-knowledge.railway.internal --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            -e QA_KNOWLEDGE_TOKEN=ci-test-only-abcdefghijklmnopqrstuvwxyz \
+            qa-knowledge:private-acceptance
+      - name: Verify all 11 HTTP contracts across isolated containers
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if docker run --rm --network qa-knowledge-acceptance --read-only --cap-drop ALL \
+                --security-opt no-new-privileges:true \
+                -e QA_KNOWLEDGE_URL=http://qa-knowledge.railway.internal:8781 \
+                -e QA_KNOWLEDGE_TOKEN=ci-test-only-abcdefghijklmnopqrstuvwxyz \
+                -e CI=1 qa-knowledge:private-acceptance \
+                python -m qa_lab.knowledge_live_probe > /tmp/knowledge-probe-result.json; then
+              break
+            fi
+            sleep 1
+          done
+          python - <<'PY'
+          import json
+          result = json.load(open('/tmp/knowledge-probe-result.json', encoding='utf-8'))
+          assert result['status'] == 'PASSED' and result['checks_passed'] == 11
+          assert len(set(result['checks'])) == 11
+          assert result['production_accepted'] is False
+          assert result['query_citation_proof']['citation_count'] > 0
+          print('PRIVATE_KNOWLEDGE_LIVE_ACCEPTED', result['receipt_sha256'])
+          PY
+      - name: Container diagnostics and cleanup
+        if: always()
+        run: |
+          docker logs qa-knowledge-service || true
+          docker rm -f qa-knowledge-service || true
+          docker network rm qa-knowledge-acceptance || true
