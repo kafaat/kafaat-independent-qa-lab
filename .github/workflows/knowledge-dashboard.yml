@@ -30,7 +30,7 @@ jobs:
           suite.addTests(loader.discover('tests', pattern='test_knowledge_integrity_v3.py'))
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           gc.collect()
-          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 81:
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 87:
               raise SystemExit('Incomplete behavioural validation: ' + repr(errors))
           PY
   dashboard-postgres:
