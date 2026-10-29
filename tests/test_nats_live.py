@@ -92,4 +92,4 @@ class NATSJetStreamLiveTests(unittest.TestCase):
             try:
                 await js.delete_stream(stream)
             finally:
-                await nc.drain()
+                await nc.close()
