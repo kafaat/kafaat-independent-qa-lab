@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "legacy_source_status": "NOT_VERIFIED",
+  "acceptance": "No parity claim without pinned legacy and new tree hashes and matching input/output receipts",
+  "cases": [
+    {"id":"legacy-cli-catalog","legacy_ref":"UNPINNED","new_ref":"main","status":"NOT_RUN"},
+    {"id":"legacy-python-smoke","legacy_ref":"UNPINNED","new_ref":"main","status":"NOT_RUN"},
+    {"id":"legacy-recovery","legacy_ref":"UNPINNED","new_ref":"main","status":"NOT_RUN"},
+    {"id":"legacy-evidence-verification","legacy_ref":"UNPINNED","new_ref":"main","status":"NOT_RUN"},
+    {"id":"legacy-security-boundaries","legacy_ref":"UNPINNED","new_ref":"main","status":"NOT_RUN"}
+  ]
+}
