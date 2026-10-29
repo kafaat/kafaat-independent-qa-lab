@@ -39,5 +39,7 @@ jobs:
           done
           docker logs qa-nats-jetstream
           exit 1
+      - name: Run real JetStream redelivery and inbox deduplication
+        run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_nats_redelivery.py' -v
       - name: Run real JetStream publish and redelivery tests
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_nats_live.py' -v
