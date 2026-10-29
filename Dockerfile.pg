@@ -1,0 +1,10 @@
+FROM python:3.12-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN groupadd --system qa && useradd --system --gid qa --home /nonexistent qa
+COPY pyproject.toml /app/
+COPY qa_lab /app/qa_lab
+RUN pip install --no-cache-dir 'psycopg[binary]>=3,<4'
+USER qa
+EXPOSE 8765
+CMD ["python","-m","qa_lab.pg_api"]
