@@ -11,6 +11,12 @@ async def run():
     nc=await nats.connect(os.environ.get('QA_NATS_URL','nats://nats:4222'))
     js=nc.jetstream()
     with psycopg.connect(dsn) as db:db.execute(INBOX_SCHEMA)
+    from nats.js.api import StreamConfig, StorageType, RetentionPolicy
+    from nats.js.errors import NotFoundError
+    try:
+        await js.stream_info('QA_JOBS')
+    except NotFoundError:
+        await js.add_stream(config=StreamConfig(name='QA_JOBS',subjects=['qa.jobs.*'],storage=StorageType.FILE,retention=RetentionPolicy.LIMITS))
     sub=await js.pull_subscribe('qa.jobs.*',durable='qa-audit-inbox',stream='QA_JOBS')
     try:
         while True:
