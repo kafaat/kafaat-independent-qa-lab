@@ -36,3 +36,11 @@ project ACLs, or whole-capability legacy parity are claimed.
 ## Follow-up: runtime query correction for wholly missing pinned documents
 
 A completely deleted pinned document previously yielded `INSUFFICIENT_EVIDENCE` during `retrieve` even though startup `verify_scope` rejected it. The query now requires every selected `(document_id, source_sha)` to exist before scoring. Two additional executable regressions prove whole-source deletion and a missing second pinned document cannot silently return a partial answer. The knowledge/dashboard workflow now requires 81 behavioural cases on each of Python 3.12 and 3.13. This guards index completeness only; it does not provide host signatures, a neural model, user ACLs or full legacy parity.
+
+## Immutable document ledger and backwards-compatible abstention
+
+An unconditional failure on an absent pinned version changed an existing retrieval contract: a never-indexed version should abstain rather than raise a corruption error. The new `qa_knowledge_documents` ledger records a trusted source version's complete UTF-8 digest and chunk count atomically with ingestion.
+
+A previously indexed source with missing chunks or mismatched count/digest raises an integrity error, even when all chunks are absent. A never-indexed pinned version still produces `INSUFFICIENT_EVIDENCE`. Databases created before the ledger must be reviewed and re-ingested from their pinned source before read access; a reader never silently reconstructs missing evidence.
+
+CI now requires 87 targeted behavioural tests on Python 3.12 and 3.13, plus three existing real PostgreSQL dashboard tests. This ledger does not provide source-host signatures, a model, access control or whole-capability legacy parity.
