@@ -1,0 +1,30 @@
+services:
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js","-sd","/data"]
+    volumes: [nats-data:/data]
+    networks: [qa-private]
+    healthcheck:
+      test: ["CMD","/nats-server","--help"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  outbox-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile.pg
+    command: ["python","-m","qa_lab.nats_relay"]
+    depends_on:
+      nats:
+        condition: service_started
+    environment:
+      QA_POSTGRES_DSN: ${QA_POSTGRES_DSN:?Set QA_POSTGRES_DSN}
+      QA_NATS_URL: nats://nats:4222
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    networks: [qa-private]
+networks:
+  qa-private:
+    external: true
+volumes:
+  nats-data:

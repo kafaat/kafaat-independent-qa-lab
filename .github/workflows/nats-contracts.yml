@@ -1,0 +1,22 @@
+name: NATS integration contracts
+on:
+  push:
+    branches: ['feat/postgres-worker-integration']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  nats-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install client dependencies
+        run: python -m pip install 'psycopg[binary]>=3,<4' 'nats-py>=2.7,<3'
+      - name: Outbox and inbox regression tests
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_nats_*.py' -v
+      - name: Compile NATS modules
+        run: python -m compileall -q qa_lab/nats_outbox.py qa_lab/nats_inbox.py qa_lab/nats_relay.py qa_lab/nats_consumer.py qa_lab/nats_init.py
