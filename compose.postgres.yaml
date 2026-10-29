@@ -1,0 +1,50 @@
+# Experimental PostgreSQL application stack. Do not merge with legacy SQLite compose.
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: qa
+      POSTGRES_DB: qa_lab
+      POSTGRES_PASSWORD: ${QA_POSTGRES_PASSWORD:?Set QA_POSTGRES_PASSWORD}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U qa -d qa_lab"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks: [qa-private]
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.pg
+    command: ["python","-m","qa_lab.pg_api"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      QA_POSTGRES_DSN: postgresql://qa:${QA_POSTGRES_PASSWORD:?Set QA_POSTGRES_PASSWORD}@postgres:5432/qa_lab
+      QA_API_TOKEN: ${QA_API_TOKEN:?Set QA_API_TOKEN}
+      QA_BIND_HOST: 0.0.0.0
+      PORT: "8765"
+    ports: ["127.0.0.1:8765:8765"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    networks: [qa-private]
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.pg
+    command: ["python","-m","qa_lab.pg_worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      QA_POSTGRES_DSN: postgresql://qa:${QA_POSTGRES_PASSWORD:?Set QA_POSTGRES_PASSWORD}@postgres:5432/qa_lab
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    networks: [qa-private]
+networks:
+  qa-private:
+volumes:
+  pg-data:
