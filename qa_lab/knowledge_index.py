@@ -162,6 +162,11 @@ class KnowledgeIndex:
                 if len(rows) > 2000:
                     raise ValueError('retrieval scope too large')
         records = sorted((dict(row) for row in rows), key=lambda row: (row['document_id'], row['ordinal']))
+        # Every source version is explicitly pinned by a trusted caller.  A
+        # completely deleted document is not an absence of matching evidence:
+        # it means the pinned index is incomplete and must fail closed.
+        if {row['document_id'] for row in records} != set(source_versions):
+            raise ValueError('missing pinned knowledge source')
         for row in records:
             if digest({key: row[key] for key in FIELDS}) != row['integrity_sha256']:
                 raise ValueError('knowledge integrity failure')
