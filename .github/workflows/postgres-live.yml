@@ -38,6 +38,8 @@ jobs:
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_process_recovery.py' -v
       - name: Verify SIGKILL worker recovery
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_sigkill_recovery.py' -v
+      - name: Verify API contract to PostgreSQL worker flow
+        run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_service_flow.py' -v
       - name: Reject skipped integration tests
         run: |
           python - <<'PY'
