@@ -81,6 +81,19 @@ class DocumentCompletenessTests(unittest.TestCase):
         self.mutate("UPDATE qa_knowledge_chunks SET text='changed' WHERE project='other'")
         self.assertEqual(self.index.answer('worker', **self.scope)['status'], 'EVIDENCE_FOUND')
 
+    def test_completely_deleted_document_fails_query_not_abstention(self):
+        self.mutate('DELETE FROM qa_knowledge_chunks')
+        with self.assertRaisesRegex(ValueError, 'missing pinned'):
+            self.index.answer('worker', **self.scope)
+
+    def test_selected_missing_document_fails_query_even_if_other_document_matches(self):
+        self.index.ingest(project='lab', document_id='rules', source_sha='b' * 40,
+                          text='unrelated policy information')
+        self.mutate("DELETE FROM qa_knowledge_chunks WHERE document_id='rules'")
+        with self.assertRaisesRegex(ValueError, 'missing pinned'):
+            self.index.retrieve('worker', project='lab',
+                                source_versions={'manual': 'a' * 40, 'rules': 'b' * 40})
+
     def test_completely_deleted_document_fails_startup_verification(self):
         self.mutate('DELETE FROM qa_knowledge_chunks')
         with self.assertRaisesRegex(ValueError, 'missing pinned'):
