@@ -1,0 +1,69 @@
+name: Knowledge and dashboard acceptance
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/knowledge-dashboard-v2']
+permissions:
+  contents: read
+jobs:
+  unit-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Six behavioural suites plus completeness; no skipped or unraisable errors
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          errors = []
+          sys.unraisablehook = lambda e: errors.append(type(e.exc_value).__name__)
+          groups = ('knowledge_ingest', 'knowledge_search', 'knowledge_http',
+                    'dashboard_query', 'dashboard_http', 'parity_report')
+          loader = unittest.TestLoader()
+          suite = unittest.TestSuite(loader.discover('tests', pattern='test_' + g + '_v2.py') for g in groups)
+          suite.addTests(loader.discover('tests', pattern='test_knowledge_integrity_v3.py'))
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 79:
+              raise SystemExit('Incomplete behavioural validation: ' + repr(errors))
+          PY
+  dashboard-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: qa
+          POSTGRES_PASSWORD: ci-only-disposable
+          POSTGRES_DB: qa_dashboard_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U qa -d qa_dashboard_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      QA_TEST_POSTGRES_DSN: postgresql://qa:ci-only-disposable@127.0.0.1:5432/qa_dashboard_test
+      QA_DASHBOARD_LIVE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install 'psycopg[binary]>=3,<4'
+      - name: Real PostgreSQL filters, evidence joins, and read-only enforcement
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          errors = []
+          sys.unraisablehook = lambda e: errors.append(type(e.exc_value).__name__)
+          result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.discover('tests', pattern='test_dashboard_pg_live_v2.py'))
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 3:
+              raise SystemExit('Live database validation incomplete: ' + repr(errors))
+          PY
