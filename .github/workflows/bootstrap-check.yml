@@ -1,0 +1,14 @@
+name: Public bootstrap checks
+on:
+  push:
+    branches: [main, 'experiments/**']
+  pull_request:
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check boundary document
+        run: test -s docs/BOUNDARY.md
