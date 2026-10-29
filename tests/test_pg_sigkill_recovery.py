@@ -51,5 +51,10 @@ time.sleep(60)
         finally:
             if child and child.poll() is None:
                 child.kill();child.wait(timeout=10)
+            if child is not None:
+                if child.stdout is not None:
+                    child.stdout.close()
+                if child.stderr is not None:
+                    child.stderr.close()
             with q._connect() as db:
                 db.execute("DELETE FROM qa_jobs WHERE idempotency_key=%s",(key,))
