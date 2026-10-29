@@ -42,6 +42,8 @@ jobs:
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_service_flow.py' -v
       - name: Verify HTTP to separate worker process
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_http_worker_flow.py' -v
+      - name: Verify transactional outbox events
+        run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_pg_transactional_outbox.py' -v
       - name: Reject skipped integration tests
         run: |
           python - <<'PY'
