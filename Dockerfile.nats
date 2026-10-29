@@ -1,0 +1,4 @@
+# Built from the repository root; no external entrypoint wrapper.
+FROM nats:2.10-alpine
+ENTRYPOINT ["/nats-server"]
+CMD ["-js", "-sd", "/data"]
