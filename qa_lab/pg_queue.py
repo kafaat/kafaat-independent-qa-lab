@@ -60,6 +60,9 @@ class PostgresQueue:
                     return {'run_id':str(row[0]),'reused':True}
                 rid=uuid.uuid4()
                 db.execute('INSERT INTO qa_jobs(id,idempotency_key,request_hash,request,status) VALUES (%s,%s,%s,%s::jsonb,%s)',(rid,request['idempotency_key'],request_hash,serialized,'PENDING'))
+                from .nats_outbox import OUTBOX_SCHEMA, enqueue
+                db.execute(OUTBOX_SCHEMA)
+                enqueue(db,'qa.jobs.created',{'run_id':str(rid),'project':request.get('project'),'source_sha':request.get('source_sha')})
                 return {'run_id':str(rid),'reused':False}
     def claim(self,worker_id):
         if not isinstance(worker_id,str) or not 1<=len(worker_id)<=128:raise ValueError('invalid worker')
