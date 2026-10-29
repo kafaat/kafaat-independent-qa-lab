@@ -1,0 +1,4 @@
+FROM nats:2.10-alpine
+# Preserve the upstream executable resolution rather than assuming /nats-server.
+ENTRYPOINT ["nats-server"]
+CMD ["-js", "-sd", "/data"]

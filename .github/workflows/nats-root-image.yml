@@ -1,0 +1,35 @@
+name: NATS root Docker image
+on:
+  push:
+    branches: ['fix/nats-root-image']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build from repository root
+        run: docker build -f Dockerfile.nats -t qa-nats:ci .
+      - name: Verify image entrypoint and command
+        run: |
+          docker image inspect qa-nats:ci --format '{{json .Config.Entrypoint}} {{json .Config.Cmd}}'
+          test "$(docker image inspect qa-nats:ci --format '{{join .Config.Entrypoint " "}}')" = nats-server
+      - name: Start JetStream with persistent storage
+        run: |
+          docker volume create qa-nats-ci
+          docker run -d --name qa-nats-ci -p 127.0.0.1:4223:4222 -v qa-nats-ci:/data qa-nats:ci
+          for i in $(seq 1 30); do
+            if bash -c 'echo > /dev/tcp/127.0.0.1/4223' 2>/dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker logs qa-nats-ci
+          exit 1
+      - name: Verify JetStream enabled
+        run: docker logs qa-nats-ci 2>&1 | grep -E 'JetStream|Jetstream'
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f qa-nats-ci || true
+          docker volume rm qa-nats-ci || true
