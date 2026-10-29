@@ -1,8 +1,25 @@
 """Idle JetStream pull must not take the consumer process down."""
 import asyncio
 import unittest
-import nats
-from qa_lab.nats_consumer import fetch_idle_safe
+import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType, SimpleNamespace
+from unittest.mock import patch
+
+# Full repository regression intentionally has no psycopg/nats-py installed.
+# Import the real function under a private module name with dependency stubs;
+# live CI independently validates behaviour against a real JetStream client.
+nats=ModuleType('nats')
+nats.errors=SimpleNamespace(TimeoutError=type('NatsTimeoutError',(Exception,),{}))
+psycopg=ModuleType('psycopg')
+spec=importlib.util.spec_from_file_location(
+    'qa_lab._nats_consumer_idle_test',
+    Path(__file__).resolve().parents[1] / 'qa_lab' / 'nats_consumer.py')
+module=importlib.util.module_from_spec(spec)
+with patch.dict(sys.modules, {'nats':nats,'psycopg':psycopg}):
+    spec.loader.exec_module(module)
+fetch_idle_safe=module.fetch_idle_safe
 
 class FakeSub:
     def __init__(self, result=None, error=None):
