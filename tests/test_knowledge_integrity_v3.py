@@ -37,6 +37,54 @@ class DocumentCompletenessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'completeness'):
             self.index.answer('worker', **self.scope)
 
+    def test_index_manifest_is_written_atomically_with_chunks(self):
+        with closing(self.index.connect()) as db:
+            row = db.execute('SELECT document_sha256,chunk_count FROM qa_knowledge_documents '
+                             'WHERE project=? AND document_id=? AND source_sha=?',
+                             ('lab', 'manual', 'a' * 40)).fetchone()
+            chunks = db.execute('SELECT COUNT(*) FROM qa_knowledge_chunks').fetchone()[0]
+        self.assertEqual(row['chunk_count'], chunks)
+        self.assertEqual(row['document_sha256'], __import__('hashlib').sha256(
+            self.document['text'].encode()).hexdigest())
+
+    def test_deleted_manifest_with_surviving_chunks_requires_migration(self):
+        self.mutate('DELETE FROM qa_knowledge_documents')
+        with self.assertRaisesRegex(ValueError, 'migration required'):
+            self.index.answer('worker', **self.scope)
+
+    def test_corrupted_manifest_chunk_count_rejected(self):
+        self.mutate('UPDATE qa_knowledge_documents SET chunk_count=1')
+        self.assert_rejected()
+
+    def test_reingesting_deleted_ledger_document_is_refused(self):
+        self.mutate('DELETE FROM qa_knowledge_chunks')
+        with self.assertRaisesRegex(ValueError, 'missing its chunks'):
+            self.index.ingest(**self.document, chunk_size=256)
+
+    def test_old_database_index_is_migrated_only_by_trusted_reingestion(self):
+        from qa_lab.knowledge_index import SCHEMA
+        legacy = self.path.parent / 'prior.sqlite'
+        with closing(sqlite3.connect(legacy)) as db, db:
+            db.execute(SCHEMA)
+        raw = [dict(row) for row in self.index._scoped(**self.scope)]
+        with closing(sqlite3.connect(legacy)) as db, db:
+            db.executemany('INSERT INTO qa_knowledge_chunks VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+                           [tuple(row[k] for k in ('project','document_id','source_sha','ordinal',
+                            'offset_start','offset_end','text','document_sha256','integrity_sha256',
+                            'embedding_model','embedding_json')) for row in raw])
+        with self.assertRaisesRegex(ValueError, 'migration required'):
+            KnowledgeIndex(legacy, read_only=True).answer('worker', **self.scope)
+        writer = KnowledgeIndex(legacy)
+        with self.assertRaisesRegex(ValueError, 'migration required'):
+            writer.answer('worker', **self.scope)
+        self.assertTrue(writer.ingest(**self.document, chunk_size=256)['reused'])
+        self.assertEqual(writer.answer('worker', **self.scope)['status'], 'EVIDENCE_FOUND')
+
+    def test_not_yet_indexed_source_remains_insufficient_evidence(self):
+        answer = self.index.answer('worker', project='lab',
+                                   source_versions={'manual': 'c' * 40})
+        self.assertEqual(answer['status'], 'INSUFFICIENT_EVIDENCE')
+
     def test_complete_document_remains_retrievable(self):
         self.assertEqual(self.index.answer('worker', **self.scope)['status'], 'EVIDENCE_FOUND')
         self.assertEqual(self.index.verify_scope(**self.scope)['documents'], 1)
@@ -81,9 +129,22 @@ class DocumentCompletenessTests(unittest.TestCase):
         self.mutate("UPDATE qa_knowledge_chunks SET text='changed' WHERE project='other'")
         self.assertEqual(self.index.answer('worker', **self.scope)['status'], 'EVIDENCE_FOUND')
 
+    def test_completely_deleted_document_fails_query_not_abstention(self):
+        self.mutate('DELETE FROM qa_knowledge_chunks')
+        with self.assertRaisesRegex(ValueError, 'completeness'):
+            self.index.answer('worker', **self.scope)
+
+    def test_selected_missing_document_fails_query_even_if_other_document_matches(self):
+        self.index.ingest(project='lab', document_id='rules', source_sha='b' * 40,
+                          text='unrelated policy information')
+        self.mutate("DELETE FROM qa_knowledge_chunks WHERE document_id='rules'")
+        with self.assertRaisesRegex(ValueError, 'completeness'):
+            self.index.retrieve('worker', project='lab',
+                                source_versions={'manual': 'a' * 40, 'rules': 'b' * 40})
+
     def test_completely_deleted_document_fails_startup_verification(self):
         self.mutate('DELETE FROM qa_knowledge_chunks')
-        with self.assertRaisesRegex(ValueError, 'missing pinned'):
+        with self.assertRaisesRegex(ValueError, 'completeness'):
             self.index.verify_scope(**self.scope)
 
     def test_missing_version_is_not_substituted(self):

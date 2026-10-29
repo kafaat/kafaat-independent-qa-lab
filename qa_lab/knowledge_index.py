@@ -22,6 +22,10 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS qa_knowledge_chunks (
  text TEXT NOT NULL, document_sha256 TEXT NOT NULL, integrity_sha256 TEXT NOT NULL,
  embedding_model TEXT, embedding_json TEXT,
  PRIMARY KEY(project, document_id, source_sha, ordinal))"""
+DOCUMENTS_SCHEMA = """CREATE TABLE IF NOT EXISTS qa_knowledge_documents (
+ project TEXT NOT NULL, document_id TEXT NOT NULL, source_sha TEXT NOT NULL,
+ document_sha256 TEXT NOT NULL, chunk_count INTEGER NOT NULL,
+ PRIMARY KEY(project, document_id, source_sha))"""
 FIELDS = ('project', 'document_id', 'source_sha', 'ordinal', 'offset_start',
           'offset_end', 'text', 'document_sha256', 'embedding_model', 'embedding_json')
 SHA = re.compile(r'[0-9a-f]{40}\Z')
@@ -81,6 +85,9 @@ class KnowledgeIndex:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with closing(self.connect()) as db, db:
                 db.execute(SCHEMA)
+                # This ledger distinguishes a version that was never indexed from
+                # one whose previously indexed chunks later went missing.
+                db.execute(DOCUMENTS_SCHEMA)
 
     def connect(self):
         if self.read_only:
@@ -135,14 +142,29 @@ class KnowledgeIndex:
             old = db.execute('SELECT * FROM qa_knowledge_chunks WHERE project=? AND document_id=? '
                              'AND source_sha=? ORDER BY ordinal',
                              (project, document_id, source_sha)).fetchall()
+            ledger = db.execute('SELECT document_sha256, chunk_count '
+                                'FROM qa_knowledge_documents WHERE project=? '
+                                'AND document_id=? AND source_sha=?',
+                                (project, document_id, source_sha)).fetchone()
+            if ledger and (ledger['document_sha256'] != doc_hash or ledger['chunk_count'] != len(records)):
+                raise ValueError('immutable source version conflict')
             if old:
-                # Source content is immutable. Rebuild a separate index to change model/chunking.
+                # Existing entries may predate the document ledger; accept a
+                # migration only after exact source/chunk equality is proven.
                 if [dict(row) for row in old] != records:
                     raise ValueError('immutable source version conflict')
+                if not ledger:
+                    db.execute('INSERT INTO qa_knowledge_documents VALUES (?,?,?,?,?)',
+                               (project, document_id, source_sha, doc_hash, len(records)))
                 return {'reused': True, 'chunks': len(records), 'document_sha256': doc_hash}
+            if ledger:
+                # A previously indexed version must not be silently repaired.
+                raise ValueError('indexed knowledge document is missing its chunks')
             db.executemany('INSERT INTO qa_knowledge_chunks (' + ','.join(records[0]) + ') '
                            'VALUES (' + ','.join('?' for _ in records[0]) + ')',
                            [tuple(record.values()) for record in records])
+            db.execute('INSERT INTO qa_knowledge_documents VALUES (?,?,?,?,?)',
+                       (project, document_id, source_sha, doc_hash, len(records)))
         return {'reused': False, 'chunks': len(records), 'document_sha256': doc_hash}
 
     def _scoped(self, project, source_versions):
@@ -150,15 +172,35 @@ class KnowledgeIndex:
         if not isinstance(source_versions, dict) or not 1 <= len(source_versions) <= 100:
             raise ValueError('explicit source versions required')
         rows = []
+        manifests = {}
         with closing(self.connect()) as db, db:
-            # All selected documents are observed in one read transaction.
+            # Chunks and the document ledger must come from the same snapshot.
             db.execute('BEGIN')
             for document_id, sha in source_versions.items():
                 label(document_id)
                 source_ref(sha)
-                rows.extend(db.execute('SELECT * FROM qa_knowledge_chunks WHERE project=? '
-                                       'AND document_id=? AND source_sha=? ORDER BY ordinal LIMIT 2001',
-                                       (project, document_id, sha)).fetchall())
+                try:
+                    manifests[document_id] = db.execute(
+                        'SELECT document_sha256, chunk_count FROM qa_knowledge_documents '
+                        'WHERE project=? AND document_id=? AND source_sha=?',
+                        (project, document_id, sha)).fetchone()
+                except sqlite3.OperationalError as exc:
+                    if 'no such table: qa_knowledge_documents' in str(exc):
+                        raise ValueError('knowledge index migration required') from exc
+                    raise
+                selected = db.execute('SELECT * FROM qa_knowledge_chunks WHERE project=? '
+                                      'AND document_id=? AND source_sha=? ORDER BY ordinal LIMIT 2001',
+                                      (project, document_id, sha)).fetchall()
+                if manifests[document_id] is None and selected:
+                    # Source indexed before introduction of the ledger.  The
+                    # trusted ingester must verify and register it explicitly.
+                    raise ValueError('knowledge index migration required')
+                if manifests[document_id] is not None:
+                    manifest = manifests[document_id]
+                    if (manifest['chunk_count'] < 1 or len(selected) != manifest['chunk_count']
+                            or any(row['document_sha256'] != manifest['document_sha256'] for row in selected)):
+                        raise ValueError('knowledge document completeness failure')
+                rows.extend(selected)
                 if len(rows) > 2000:
                     raise ValueError('retrieval scope too large')
         records = sorted((dict(row) for row in rows), key=lambda row: (row['document_id'], row['ordinal']))
