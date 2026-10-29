@@ -4,10 +4,7 @@ import json
 import os
 import unittest
 import uuid
-import nats
-import psycopg
 from qa_lab.nats_inbox import INBOX_SCHEMA, accept_event
-from nats.js.api import StreamConfig, StorageType
 
 DSN=os.environ.get('QA_TEST_POSTGRES_DSN')
 URL=os.environ.get('QA_NATS_URL')
@@ -17,6 +14,9 @@ class NATSJetStreamLiveTests(unittest.TestCase):
     def test_publish_receive_and_duplicate_inbox(self):
         asyncio.run(self._scenario())
     async def _scenario(self):
+        import nats
+        import psycopg
+        from nats.js.api import StreamConfig, StorageType
         nc=await nats.connect(URL,connect_timeout=5)
         js=nc.jetstream()
         stream='QA_TEST_'+uuid.uuid4().hex[:12].upper()
