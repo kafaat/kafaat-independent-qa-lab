@@ -1,0 +1,84 @@
+name: Public-doc knowledge image acceptance
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/public-doc-knowledge-service']
+permissions:
+  contents: read
+jobs:
+  seed-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      matrix:
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Check offline seed contract, no skips
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          errors = []
+          sys.unraisablehook = lambda e: errors.append(type(e.exc_value).__name__)
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_knowledge_seed_v1.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 12:
+              raise SystemExit('seed acceptance incomplete: ' + repr(errors))
+          PY
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned public-doc index from repository root
+        run: docker build -f Dockerfile.knowledge -t qa-knowledge:ci .
+      - name: Start unprivileged read-only service
+        run: |
+          docker run -d --name qa-knowledge-ci --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --network bridge -p 127.0.0.1:8781:8781 \
+            -e QA_KNOWLEDGE_TOKEN=ci-test-only-abcdefghijklmnopqrstuvwxyz \
+            qa-knowledge:ci
+      - name: Verify authentication, citations and abstention on actual image
+        run: |
+          python - <<'PY'
+          import json, time, urllib.request, urllib.error
+          origin = 'http://127.0.0.1:8781'
+          headers = {'Authorization': 'Bearer ci-test-only-abcdefghijklmnopqrstuvwxyz'}
+          for attempt in range(40):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(origin+'/healthz',headers=headers),timeout=2) as response:
+                      health=json.loads(response.read())
+                      assert response.status==200 and health['status']=='ok'
+                      break
+              except (OSError,ValueError):time.sleep(.25)
+          else:raise SystemExit('knowledge service did not start')
+          for path in ['/healthz', '/v1/search']:
+              req=urllib.request.Request(origin+path)
+              try:urllib.request.urlopen(req,timeout=3)
+              except urllib.error.HTTPError as exc:assert exc.code==401
+              else:raise AssertionError('unauthenticated request accepted')
+          def request(query):
+              body=json.dumps({'query':query}).encode()
+              req=urllib.request.Request(origin+'/v1/answer',data=body,headers=headers|{'Content-Type':'application/json'})
+              with urllib.request.urlopen(req,timeout=3) as response:
+                  assert response.status==200
+                  assert response.headers['Cache-Control']=='no-store'
+                  return json.loads(response.read())
+          result=request('PostgreSQL')
+          assert result['status']=='EVIDENCE_FOUND' and result['citations']
+          assert all(hit['document_id']=='postgres-acceptance' for hit in result['citations'])
+          assert result['answer_mode']=='extractive-no-llm'
+          assert result['authority']=='reference-only' and not result['production_accepted']
+          assert request('unicorn-nonexistent-hypothetical')['status']=='INSUFFICIENT_EVIDENCE'
+          print('PUBLIC_DOC_KNOWLEDGE_IMAGE_ACCEPTED',json.dumps({'citations':len(result['citations']),'auth':'required','mode':result['answer_mode']}))
+          PY
+      - name: Container diagnostics and cleanup
+        if: always()
+        run: |
+          docker logs qa-knowledge-ci || true
+          docker rm -f qa-knowledge-ci || true
