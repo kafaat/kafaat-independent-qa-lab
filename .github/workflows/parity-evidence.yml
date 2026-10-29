@@ -1,0 +1,50 @@
+name: Fail-closed parity evidence
+on:
+  push:
+    branches: [main, 'fix/parity-source-bound-evidence']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.12', '3.13']
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run all parity regressions, no skips or unraisable errors
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          PYTHONPATH=. python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          leaks = []
+          sys.unraisablehook = lambda item: leaks.append(type(item.exc_value).__name__)
+          loader = unittest.TestLoader()
+          suite = unittest.TestSuite(loader.discover('tests', pattern=p) for p in (
+              'test_parity_evidence.py', 'test_knowledge_parity.py'))
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or leaks or result.testsRun != 41:
+              raise SystemExit('Incomplete parity acceptance or resource leak: ' + repr(leaks))
+          PY
+      - name: Verify archived local receipt pair (not a new legacy execution)
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from qa_lab.parity import evaluate
+          root = Path('docs/evidence/parity-20261029')
+          case = json.loads((root / 'result.json').read_text())['case']
+          pair = {(case['id'], role): json.loads((root / (role + '.receipt.json')).read_text())
+                  for role in ('legacy', 'new')}
+          row = evaluate([case], pair)[0]
+          assert row['status'] == 'VERIFIED', row
+          assert row['production_accepted'] is False
+          print('Archived local subcase receipt consistency verified; no full-profile claim')
+          PY
