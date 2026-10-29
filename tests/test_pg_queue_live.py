@@ -57,3 +57,21 @@ class PostgreSQLIntegrationTests(unittest.TestCase):
         claimed = [x for x in results if x]
         self.assertEqual(len(claimed), 1)
         self.assertEqual(claimed[0]["run_id"], first["run_id"])
+
+    def test_unknown_outcome_persists_across_new_connections(self):
+        first = self.queue.submit(self.request, self.digest)
+        claimed = self.queue.claim("worker-interrupted")
+        self.assertEqual(claimed["run_id"], first["run_id"])
+        # Simulates a worker disappearing after its claim was committed:
+        # a new queue instance sees RUNNING and does not reclaim the job.
+        from qa_lab.pg_queue import PostgresQueue
+        replacement = PostgresQueue(DSN)
+        state = replacement.get(first["run_id"])
+        self.assertEqual(state["status"], "RUNNING")
+        self.assertEqual(replacement.reconcile(first["run_id"])["action"], "manual-review")
+        self.assertIsNone(replacement.claim("replacement-worker"))
+        with self.assertRaises(ValueError):
+            replacement.finish(first["run_id"], "replacement-worker", "PASSED", {})
+        replacement.finish(first["run_id"], "worker-interrupted", "BLOCKED", {"reason": "operator reconciliation"})
+        with self.assertRaises(ValueError):
+            replacement.finish(first["run_id"], "worker-interrupted", "PASSED", {})
