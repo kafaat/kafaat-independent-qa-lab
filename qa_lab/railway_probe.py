@@ -35,10 +35,10 @@ async def main():
         while time.monotonic()<deadline:
             with q._connect() as db:
                 events=db.execute("SELECT subject,published_at FROM qa_outbox WHERE payload->>'run_id'=%s",(rid,)).fetchall()
-                inbox=db.execute("SELECT count(*) FROM qa_inbox WHERE payload->>'payload' IS NOT NULL AND payload->'payload'->>'run_id'=%s",(rid,)).fetchone()[0]
+                inbox=db.execute("SELECT count(*) FROM qa_inbox WHERE payload->>'run_id'=%s",(rid,)).fetchone()[0]
             if len(events)==2 and all(x[1] is not None for x in events) and inbox>=2:break
             await asyncio.sleep(1)
-        else:raise RuntimeError('outbox or inbox evidence incomplete')
+        else:raise RuntimeError('outbox or inbox evidence incomplete: '+json.dumps({'outbox_count':len(events),'outbox_published':sum(x[1] is not None for x in events),'inbox_count':inbox}))
         if sorted(x[0] for x in events)!=['qa.jobs.created','qa.jobs.finished']:raise RuntimeError('unexpected event set')
         await js.stream_info('QA_JOBS')
         print(json.dumps({'status':'PASSED','run_id':rid,'source_sha':req['source_sha'],'outbox_events':2,'inbox_events':inbox,'authority':'execution-evidence-only'}))
