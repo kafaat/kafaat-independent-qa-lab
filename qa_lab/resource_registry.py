@@ -5,8 +5,8 @@ This module never downloads, executes or approves external resources.
 from urllib.parse import urlsplit, urlunsplit
 import re
 
-_HEX = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}\\Z")
-_LICENSE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.+-]{0,79}\\Z")
+_HEX = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}\Z")
+_LICENSE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.+-]{0,79}\Z")
 
 
 def _canonical_url(value):
