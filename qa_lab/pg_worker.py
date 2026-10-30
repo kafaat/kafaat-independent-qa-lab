@@ -16,6 +16,15 @@ def execute_one(queue, worker_id):
     if not job:return None
     request=job['request']
     rid=job['run_id']
+    if isinstance(request,dict) and request.get('recipe')=='audio-pcm-v1':
+        from .audio_jobs import enabled, execute, digest
+        if not enabled():
+            return queue.finish(rid,worker_id,'BLOCKED',{'status':'BLOCKED','reason':'audio recipe disabled','authority':'execution-evidence-only'})
+        receipt=execute(request)
+        receipt.pop('receipt_sha256',None)
+        receipt.update(run_id=rid,worker_id=worker_id)
+        receipt['receipt_sha256']=digest(receipt)
+        return queue.finish(rid,worker_id,receipt['status'],receipt)
     if not isinstance(request,dict) or request.get('recipe')!='python-smoke':
         return queue.finish(rid,worker_id,'BLOCKED',{'status':'BLOCKED','reason':'recipe not allowlisted','authority':'execution-evidence-only'})
     try:

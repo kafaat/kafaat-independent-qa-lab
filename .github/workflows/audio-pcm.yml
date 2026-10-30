@@ -24,7 +24,12 @@ jobs:
           import gc, sys, unittest
           errors = []
           sys.unraisablehook = lambda e: errors.append(type(e.exc_value).__name__)
-          suite = unittest.defaultTestLoader.discover('tests', pattern='test_audio_*.py')
+          # Jobs and live integration have their own strict workflow. Keep this
+          # gate scoped to the original 76 offline parsing/evidence tests.
+          loader = unittest.TestLoader()
+          suite = unittest.TestSuite(loader.discover('tests', pattern=pattern)
+              for pattern in ('test_audio_pcm.py', 'test_audio_alignment.py',
+                              'test_audio_evidence.py'))
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           gc.collect()
           if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 76:
