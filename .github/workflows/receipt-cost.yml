@@ -1,0 +1,23 @@
+name: Receipt cost evidence
+on:
+  pull_request:
+    paths:
+      - 'qa_lab/receipt_cost.py'
+      - 'tests/test_receipt_cost.py'
+      - '.github/workflows/receipt-cost.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-cost:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m py_compile qa_lab/receipt_cost.py tests/test_receipt_cost.py
+      - run: python -m unittest discover -s tests -p 'test_receipt_cost.py' -v
