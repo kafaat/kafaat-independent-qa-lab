@@ -105,7 +105,7 @@ def render(data, options=None):
     esc = lambda value: html.escape(str(value), quote=True)
     page = ['<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">',
             '<meta name="viewport" content="width=device-width, initial-scale=1">',
-            '<title>Independent QA Lab</title><body><h1>المختبر المستقل — أدلة التنفيذ</h1>',
+            '<title>Independent QA Lab</title><body><nav><a href="/rejections">مراجعة الرسائل المرفوضة</a></nav><h1>المختبر المستقل — أدلة التنفيذ</h1>',
             '<p>قراءة فقط. مرجع المصدر في الطلب ليس إثباتًا مستقلًا للشيفرة المختبرة.</p>']
     if 'runs' in data:
         options = options or {}
@@ -139,6 +139,7 @@ def valid_token(token):
 class Dashboard(BaseHTTPRequestHandler):
     queue = None
     store = None
+    rejections_store = None
 
     def setup(self):
         super().setup()
@@ -167,6 +168,11 @@ class Dashboard(BaseHTTPRequestHandler):
         target = urlsplit(self.path)
         store = self.store if self.store is not None else ReadOnlyRuns(self.queue)
         try:
+            if (target.path in ('/rejections', '/api/rejections')
+                    or target.path.startswith(('/rejections/', '/api/rejections/'))):
+                from .rejection_review import response
+                data, as_json = response(self.queue, target, self.rejections_store)
+                return self.reply(200, data, as_json)
             if target.path in ('/', '/api/runs'):
                 options = filters(target.query)
                 data = store.list(options)
