@@ -9,7 +9,7 @@ _HEX = re.compile(r'[0-9a-f]{64}\Z')
 
 
 def audit_record(record, expected_sha, expected_deployment):
-    if not isinstance(record, dict) or not isinstance(expected_sha, str) or not _HEX.fullmatch(expected_sha):
+    if not isinstance(record, dict) or not isinstance(expected_sha, str) or not _SOURCE.fullmatch(expected_sha):
         raise ValueError('invalid receipt or expected SHA')
     if not isinstance(expected_deployment, str) or not expected_deployment:
         raise ValueError('deployment ID required')
