@@ -33,6 +33,15 @@ class RegistryTests(unittest.TestCase):
             with self.subTest(url=url):
                 self.assertIn('INVALID_URL', evaluate([resource(url=url)])['resources'][0]['reasons'])
 
+    def test_empty_catalog_is_not_qualified(self):
+        result = evaluate([])
+        self.assertEqual(result['status'], 'REVIEW_REQUIRED')
+        self.assertFalse(result['execution_approved'])
+
+    def test_unknown_fields_are_rejected(self):
+        result = evaluate([resource(unexpected='ignore-me')])
+        self.assertIn('UNKNOWN_FIELDS', result['resources'][0]['reasons'])
+
     def test_invalid_entries_fail_closed(self):
         self.assertEqual(evaluate([None])['status'], 'REVIEW_REQUIRED')
         with self.assertRaises(ValueError):
