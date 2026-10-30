@@ -1,0 +1,120 @@
+{
+  "schema_version": "pcm-evidence-publication-linkage-1.0",
+  "observed_at_utc": "2026-10-30T15:56:14.875250+00:00",
+  "repository": "kafaat/kafaat-independent-qa-lab",
+  "publication_base_commit": "f6ac494dc4fa8b747736af57d935edf8d3bf8a2d",
+  "publication_base_tree": "39923b6c1eb5a250ac79a7a99573fcfa6565cb64",
+  "verified_via": "GitHub Git tree API; local Git blob hashes of unchanged archive bytes",
+  "acceptance_bundle_sha256": "7cf77795ab992ce4ba6ec9a9bc3d7a2c72bb1cdf80f966b064406111741324e2",
+  "files_compared": 11,
+  "identical_files": 9,
+  "files": [
+    {
+      "path": ".github/workflows/audio-pcm.yml",
+      "archived_size_bytes": 1172,
+      "archived_sha256": "91d820b4dc2b5b292598203ad45374117255b3cc37a374b0791740321e888836",
+      "archived_git_blob": "9cac6b7eec37a22ecf96608907acfcef700af385",
+      "repository_git_blob": "d14ba7210c29e54b92eb7c5a969408f679c65008",
+      "repository_size_bytes": 1492,
+      "identical": false
+    },
+    {
+      "path": "docs/AUDIO_PCM_PARITY.md",
+      "archived_size_bytes": 4106,
+      "archived_sha256": "5ccd691c6281c39d54d89204e37b2aa6e3cc0a19b69ed9f159a4642136605c7d",
+      "archived_git_blob": "efb47f861b7afa561209f05a23eb0b6ed22eadbc",
+      "repository_git_blob": "efb47f861b7afa561209f05a23eb0b6ed22eadbc",
+      "repository_size_bytes": 4106,
+      "identical": true
+    },
+    {
+      "path": "docs/LEGACY_PARITY_PROGRESS.json",
+      "archived_size_bytes": 6783,
+      "archived_sha256": "8817b10bb01559bdcd43babb8677310f583ec387487e5a2f0f789acbdac5b7d9",
+      "archived_git_blob": "5f331418f84a68cebaafb23b0f98715cee1e3d9c",
+      "repository_git_blob": "5f331418f84a68cebaafb23b0f98715cee1e3d9c",
+      "repository_size_bytes": 6783,
+      "identical": true
+    },
+    {
+      "path": "docs/evidence/audio-pcm-20261030/summary.json",
+      "archived_size_bytes": 10802,
+      "archived_sha256": "9ebb3e840fbc08585fb4d3d03e7f8b51cd3d32331c1b496b9baec2c73169be52",
+      "archived_git_blob": "683adbf3337ba2af22826ef12462b12ca69a3f8f",
+      "repository_git_blob": "683adbf3337ba2af22826ef12462b12ca69a3f8f",
+      "repository_size_bytes": 10802,
+      "identical": true
+    },
+    {
+      "path": "qa_lab/__init__.py",
+      "archived_size_bytes": 0,
+      "archived_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archived_git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "repository_git_blob": "758226ea2351abd4a96a3a038f47371b2d7cd1f1",
+      "repository_size_bytes": 95,
+      "identical": false
+    },
+    {
+      "path": "qa_lab/audio_pcm.py",
+      "archived_size_bytes": 7878,
+      "archived_sha256": "2ec8dde53cb0afde7f2b1090dad6d14be8e408a108315486dbc38d5a8100f9b0",
+      "archived_git_blob": "503df5baf9ae900a93f4eced4370887d2eb1acba",
+      "repository_git_blob": "503df5baf9ae900a93f4eced4370887d2eb1acba",
+      "repository_size_bytes": 7878,
+      "identical": true
+    },
+    {
+      "path": "qa_lab/parity.py",
+      "archived_size_bytes": 7891,
+      "archived_sha256": "469e8553fa1e4ff19eeac029ca04b962184c851ffefb0fc1db1a2a38106e0b08",
+      "archived_git_blob": "8c184e195f66aaa80825a36de6fc9027d55cafaa",
+      "repository_git_blob": "8c184e195f66aaa80825a36de6fc9027d55cafaa",
+      "repository_size_bytes": 7891,
+      "identical": true
+    },
+    {
+      "path": "tests/audio_fixtures.py",
+      "archived_size_bytes": 4232,
+      "archived_sha256": "a7d827f9998471a318e1dac4fe3ceb80abb4a7dedf72c0a20a8cfdbfba6fad8f",
+      "archived_git_blob": "8a57b929a0990e6777ee9924316ff5bfe42178e6",
+      "repository_git_blob": "8a57b929a0990e6777ee9924316ff5bfe42178e6",
+      "repository_size_bytes": 4232,
+      "identical": true
+    },
+    {
+      "path": "tests/test_audio_alignment.py",
+      "archived_size_bytes": 510,
+      "archived_sha256": "87863b535f576ac38aab7d01b1d484d879b1cdd28b7db41c80abb079727514b2",
+      "archived_git_blob": "7f3c6fd93ec37548a1b7b060ba4a66d9d1f882dd",
+      "repository_git_blob": "7f3c6fd93ec37548a1b7b060ba4a66d9d1f882dd",
+      "repository_size_bytes": 510,
+      "identical": true
+    },
+    {
+      "path": "tests/test_audio_evidence.py",
+      "archived_size_bytes": 3031,
+      "archived_sha256": "42e4cfe761d5da848368afc869303c9971b3a0f22a90393e3831b6ae60e438b1",
+      "archived_git_blob": "32d0cbf209de0c6d2ebff413168563c50c5e2591",
+      "repository_git_blob": "32d0cbf209de0c6d2ebff413168563c50c5e2591",
+      "repository_size_bytes": 3031,
+      "identical": true
+    },
+    {
+      "path": "tests/test_audio_pcm.py",
+      "archived_size_bytes": 8238,
+      "archived_sha256": "55222a06bc2b5ca210a0793890dc6d261a84f03e9ae3ff72f853606cbea26f7b",
+      "archived_git_blob": "f28ecc07d79be46d2a6dd088576ba16a8779d63a",
+      "repository_git_blob": "f28ecc07d79be46d2a6dd088576ba16a8779d63a",
+      "repository_size_bytes": 8238,
+      "identical": true
+    }
+  ],
+  "nonmatching_paths": {
+    ".github/workflows/audio-pcm.yml": "Current base selects only the original three test modules; newer audio-job tests have a separate gate. Archived workflow predates this change.",
+    "qa_lab/__init__.py": "The archive contains an empty initializer, whereas the repository includes a docstring and __version__ metadata. The archive is a scoped runnable package, not a byte-for-byte repository checkout."
+  },
+  "current_repository_regression_claimed": false,
+  "new_audio_jobs_tested_by_archived_acceptance": false,
+  "historical_receipts_modified": false,
+  "production_accepted": false
+}
