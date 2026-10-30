@@ -8,6 +8,9 @@ from .http_acceptance import canonical
 _HEX = re.compile(r'[0-9a-f]{64}\Z')
 
 
+_SOURCE = re.compile(r'[0-9a-f]{40}\\Z')
+
+
 def audit_record(record, expected_sha, expected_deployment):
     if not isinstance(record, dict) or not isinstance(expected_sha, str) or not _SOURCE.fullmatch(expected_sha):
         raise ValueError('invalid receipt or expected SHA')
