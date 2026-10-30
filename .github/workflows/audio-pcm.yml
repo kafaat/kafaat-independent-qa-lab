@@ -1,0 +1,32 @@
+name: Offline PCM integrity and archived parity
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python: ['3.12', '3.13']
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONPATH: '.:tests'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python }}
+      - name: PCM parsing, filesystem boundaries and archived comparison; no skips
+        run: |
+          python -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          errors = []
+          sys.unraisablehook = lambda e: errors.append(type(e.exc_value).__name__)
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_audio_*.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 75:
+              raise SystemExit('Incomplete PCM verification: ' + repr(errors))
+          PY

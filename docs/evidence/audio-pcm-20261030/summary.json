@@ -1,0 +1,323 @@
+{
+  "schema_version": "audio-local-comparison-summary-1.0",
+  "evidence_kind": "archived-local-run-not-a-new-legacy-CI-execution",
+  "base_commit": "3597e440a4dff6499c030489197bd4922c133ba6",
+  "legacy_archive_sha256": "8bc988c3ca18c27a221c3684d868d43ec0767fd16318a82c5ac518e80081b6f7",
+  "source_manifests": {
+    "legacy": {
+      "scope": "reviewed-audio-module-only",
+      "files": {
+        "audio_contract.py": "c82b941bb20c4acfd5e18bbca11b07b85c566e3ac84c21229cc3bfa409252ead"
+      }
+    },
+    "new": {
+      "scope": "reviewed-audio-module-only",
+      "files": {
+        "audio_pcm.py": "2ec8dde53cb0afde7f2b1090dad6d14be8e408a108315486dbc38d5a8100f9b0"
+      }
+    }
+  },
+  "fixture_generator_sha256": "a7d827f9998471a318e1dac4fe3ceb80abb4a7dedf72c0a20a8cfdbfba6fad8f",
+  "compatibility_input": {
+    "contract": "integer-pcm-compatibility-corpus-v1",
+    "fixtures": [
+      {
+        "id": "pcm-8bit-1ch-basic",
+        "sha256": "e9c19402f789021ecd09f6765c23d772270f7cd2da4c6d42a7730430701deaf1",
+        "options": {}
+      },
+      {
+        "id": "pcm-8bit-1ch-ext",
+        "sha256": "03fe1843b4d9e94df9338e8ef27edadf0229b1a34cc7ee953aafa7d34fa7a142",
+        "options": {}
+      },
+      {
+        "id": "pcm-8bit-2ch-basic",
+        "sha256": "e2fedab833a045ed77d3fb7e965c3757ffb8b8bb91a371af19970a7f1dc2f60b",
+        "options": {}
+      },
+      {
+        "id": "pcm-8bit-2ch-ext",
+        "sha256": "96b07001967f41dfa98fa0a365b52c302383c93ac7b04303d9825e2f2457df6c",
+        "options": {}
+      },
+      {
+        "id": "pcm-16bit-1ch-basic",
+        "sha256": "ee9db5a92fbebeee1e187f83e0139cb24dc9d44fc66effa70b2d936988f4f0f6",
+        "options": {}
+      },
+      {
+        "id": "pcm-16bit-1ch-ext",
+        "sha256": "83fd61b9403a242efefdabd7277441dd7bcee5bf58e1cccce179818562ef93be",
+        "options": {}
+      },
+      {
+        "id": "pcm-16bit-2ch-basic",
+        "sha256": "9ea2576fada91392d09f7b76bbb06ea707c46dc425e2208d739fba6f32985538",
+        "options": {}
+      },
+      {
+        "id": "pcm-16bit-2ch-ext",
+        "sha256": "eb62c1fc1502ef74612eac1e38fc57689a9610d36e663dc4d5789aa0a2452407",
+        "options": {}
+      },
+      {
+        "id": "pcm-24bit-1ch-basic",
+        "sha256": "39caaad106bf6f43075cfd8c27f25218fe82e955e4394b752f7e3e1dd8e2f7cc",
+        "options": {}
+      },
+      {
+        "id": "pcm-24bit-1ch-ext",
+        "sha256": "def73cb816b066650b64a0ff2c6c412c516353e0d98dcbc56f166f19cd010fc5",
+        "options": {}
+      },
+      {
+        "id": "pcm-24bit-2ch-basic",
+        "sha256": "b664bc5e8e3b67972b93f8372988f9a301d84d29ea648d27ff1be65178056c14",
+        "options": {}
+      },
+      {
+        "id": "pcm-24bit-2ch-ext",
+        "sha256": "724a650db344d04d0a02e3459fd1c1541aa7e1c77c94365426a72d094238f853",
+        "options": {}
+      },
+      {
+        "id": "pcm-32bit-1ch-basic",
+        "sha256": "e0ec7da93b913f4616eba288412045755be440570cbb7ceefe3cf1322aebc7fd",
+        "options": {}
+      },
+      {
+        "id": "pcm-32bit-1ch-ext",
+        "sha256": "35cd738eae0f801552972a74f73d45fcaf8e6e08879cc74c023bc4b8a490eb4b",
+        "options": {}
+      },
+      {
+        "id": "pcm-32bit-2ch-basic",
+        "sha256": "ab01f34694cb09e27d25e8cff0f1799e7017ef39055238d9a331daf4ecbf3a9a",
+        "options": {}
+      },
+      {
+        "id": "pcm-32bit-2ch-ext",
+        "sha256": "3ee7d86fd4edac36906fafc06301149a6ecfee81644dcbfce68595a238b27e8e",
+        "options": {}
+      },
+      {
+        "id": "padded-ancillary-chunk",
+        "sha256": "3b8f1b4bc977255a98b40a45f716060edf470d30c626225bce8f7a291a230dab",
+        "options": {}
+      },
+      {
+        "id": "padded-odd-data",
+        "sha256": "ccd82f51fde844cd5ecd4910a077903d446effc438cf3e7cb38972bcb1736e03",
+        "options": {}
+      },
+      {
+        "id": "rate-8000",
+        "sha256": "4926c45929670c36923c9474fd9c1975ca6e1429c1e4f79e58c3c17605e912d3",
+        "options": {}
+      },
+      {
+        "id": "rate-192000",
+        "sha256": "75d918bb65a6f8d2845fc868b829afbf11507cef0b135f24c985bac293b1ff38",
+        "options": {}
+      },
+      {
+        "id": "negative-signed-24bit",
+        "sha256": "bb060a2710dc8c551768985c1ffb4eda97cb553d2ecdde4ad78afb1de4c6afbd",
+        "options": {}
+      },
+      {
+        "id": "negative-signed-32bit",
+        "sha256": "3f66c38cae14237d27fbae23631962e14eaab75a6eb82d46532e1c2a4a1954d0",
+        "options": {}
+      },
+      {
+        "id": "pcm-format-18byte",
+        "sha256": "a947834dfb22f73fe17acdb7d824a3e3aac3b76b04af2b63414dfcb67ccf4648",
+        "options": {}
+      },
+      {
+        "id": "matching-expectations",
+        "sha256": "ee9db5a92fbebeee1e187f83e0139cb24dc9d44fc66effa70b2d936988f4f0f6",
+        "options": {
+          "sample_rate": 16000,
+          "channels": 1
+        }
+      },
+      {
+        "id": "duration-exact-bounds",
+        "sha256": "ee9db5a92fbebeee1e187f83e0139cb24dc9d44fc66effa70b2d936988f4f0f6",
+        "options": {
+          "min_duration": 0.1,
+          "max_duration": 0.1
+        }
+      },
+      {
+        "id": "not-wave",
+        "sha256": "7878c7e3f804dd6c6042ae730431fbecfb7ede695b29f4c77ca5d0cac64ceb73",
+        "options": {}
+      },
+      {
+        "id": "empty",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "options": {}
+      },
+      {
+        "id": "truncated-data",
+        "sha256": "6d0bcf1f1928a262f28fc6200a4a7bed0ec83fc3b221ad47575534d50df4043e",
+        "options": {}
+      },
+      {
+        "id": "trailing-bytes",
+        "sha256": "22eb41dc9f214e1900248ec241d76d157a2fe2f1fb52c51f61642539b636574b",
+        "options": {}
+      },
+      {
+        "id": "silent-unsigned",
+        "sha256": "dc4a958365831bdcfeab24f7f5d9f8aa663d1bcb94436df9715fc1e61d0b698f",
+        "options": {}
+      },
+      {
+        "id": "silent-signed",
+        "sha256": "2976da01e205a110c9fa41d47659e238a5c6d3c3f3137582f2949853faa201dd",
+        "options": {}
+      },
+      {
+        "id": "no-data",
+        "sha256": "04d9bddab64a8da67151c234322d72fb7e2207301cdafe8487e30dbcfeb9a332",
+        "options": {}
+      },
+      {
+        "id": "data-before-format",
+        "sha256": "e13e2653455a7baad45fe94a1406399f58cbfe2c82cb8d30e82bf0c6c02e66ac",
+        "options": {}
+      },
+      {
+        "id": "duplicate-data",
+        "sha256": "e46e24ae50513ebca2e404488f05ee7f8a51f8ff989c49fc0e975934ae9d7764",
+        "options": {}
+      },
+      {
+        "id": "incomplete-frame",
+        "sha256": "29899c461d983b12636872d86d956154a62fc7a9b36aea419d5572949776c214",
+        "options": {}
+      },
+      {
+        "id": "empty-data",
+        "sha256": "ba584a378b11d9e9c98736fd8c256fe1453a84ee4139416d24b07acff424f0fb",
+        "options": {}
+      },
+      {
+        "id": "unsupported-float",
+        "sha256": "5e0d7c7d3d5662578f1b70babe32d183cd51abd385395fb83840a98e64439e80",
+        "options": {}
+      },
+      {
+        "id": "wrong-rate-expectation",
+        "sha256": "ee9db5a92fbebeee1e187f83e0139cb24dc9d44fc66effa70b2d936988f4f0f6",
+        "options": {
+          "sample_rate": 8000
+        }
+      },
+      {
+        "id": "wrong-channel-expectation",
+        "sha256": "ee9db5a92fbebeee1e187f83e0139cb24dc9d44fc66effa70b2d936988f4f0f6",
+        "options": {
+          "channels": 2
+        }
+      },
+      {
+        "id": "too-short-policy",
+        "sha256": "ee9db5a92fbebeee1e187f83e0139cb24dc9d44fc66effa70b2d936988f4f0f6",
+        "options": {
+          "min_duration": 0.2
+        }
+      },
+      {
+        "id": "too-long-policy",
+        "sha256": "ee9db5a92fbebeee1e187f83e0139cb24dc9d44fc66effa70b2d936988f4f0f6",
+        "options": {
+          "max_duration": 0.05
+        }
+      }
+    ],
+    "normalization": "accepted: all PCM metrics; rejected: decision only; error text not compared"
+  },
+  "compatibility_input_digest": "509cc84800d5e20339e20472f6d9e808cf48154522aab4be4ccc3dd86c56d0b1",
+  "legacy_output_digest": "2ff762fb2f383fe54a6a4c2bf9d9908f5bc927229806559ace0589726b8f4b32",
+  "new_output_digest": "2ff762fb2f383fe54a6a4c2bf9d9908f5bc927229806559ace0589726b8f4b32",
+  "execution_identity": {
+    "legacy": {
+      "run_id": "02e805af-4371-47d0-82c5-1ee6fe50ee07",
+      "started_at": "2026-10-30T11:15:54.291599+00:00",
+      "finished_at": "2026-10-30T11:15:54.311869+00:00",
+      "receipt_sha256": "3aec50eb50bb879cc23afedc33ebbbc63779c4e112801bcb8d06fa64d7592b74",
+      "source_unchanged": true,
+      "input_files_unchanged": true,
+      "python_version": "3.13.5"
+    },
+    "new": {
+      "run_id": "08661224-1d21-4a94-af83-940887f536b0",
+      "started_at": "2026-10-30T11:15:54.312086+00:00",
+      "finished_at": "2026-10-30T11:15:54.326869+00:00",
+      "receipt_sha256": "8edbbc4bf08f7b46964eae25bc01c7e98078ed5a18573e2ee0cc46bdf6618147",
+      "source_unchanged": true,
+      "input_files_unchanged": true,
+      "python_version": "3.13.5"
+    }
+  },
+  "total_fixtures": 47,
+  "compatibility_fixtures": 41,
+  "differences": [
+    {
+      "id": "bad-block-alignment",
+      "group": "hardening",
+      "legacy_decision": "ACCEPTED",
+      "new_decision": "REJECTED",
+      "input_sha256": "73949a69c09eeabca7faa57060227adc12cf50cf17e198697ec5964a92f8ece0"
+    },
+    {
+      "id": "bad-byte-rate",
+      "group": "hardening",
+      "legacy_decision": "ACCEPTED",
+      "new_decision": "REJECTED",
+      "input_sha256": "6658f10fd03312abc965dd791938e6d5602f31093d862015b9d9f18c3d69e1e0"
+    },
+    {
+      "id": "15bit-container",
+      "group": "hardening",
+      "legacy_decision": "ACCEPTED",
+      "new_decision": "REJECTED",
+      "input_sha256": "1fa77c36bee2571c959dd1d2ca46fab1acaa4144f96a6f16067fd27e17221dab"
+    },
+    {
+      "id": "duplicate-format",
+      "group": "hardening",
+      "legacy_decision": "ACCEPTED",
+      "new_decision": "REJECTED",
+      "input_sha256": "8e1f19404f4bed22da03a3f0c7532dc240655d139d5d9fac3067030059a5ed07"
+    },
+    {
+      "id": "reduced-valid-bits",
+      "group": "unsupported",
+      "legacy_decision": "ACCEPTED",
+      "new_decision": "REJECTED",
+      "input_sha256": "da201803f3b121ac1a1f9a58ffda40cd41248bb6b871426cd4917c3686a92694"
+    },
+    {
+      "id": "wrong-channel-mask",
+      "group": "hardening",
+      "legacy_decision": "ACCEPTED",
+      "new_decision": "REJECTED",
+      "input_sha256": "b88ee5d65d86ce1d63ecfeabea8a2571b84a66f7b1f3ce0e99b5c6dc5a024aba"
+    }
+  ],
+  "matching_subcase_status": "VERIFIED",
+  "full_audio_profile_verified": false,
+  "deployed_recipe_registered": false,
+  "legacy_cli_parity": "NOT_RUN",
+  "production_accepted": false,
+  "scope": "independent offline PCM parser only; source manifests cover modules, not full repos",
+  "full_receipts_location": "Independent_QA_Audio_PCM_20261030.zip: evidence/comparison.json",
+  "summary_is_complete_v2_receipt": false
+}
