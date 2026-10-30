@@ -29,7 +29,7 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(len(result['resources'][0]['reasons']), 4)
 
     def test_reject_credentials_http_fragment_and_control_characters(self):
-        for url in ('http://example.org', 'https://user:pass@example.org', 'https://example.org/#frag', 'https://example.org/\\nother'):
+        for url in ('http://example.org', 'https://user:pass@example.org', 'https://example.org/#frag', 'https://example.org/\nother'):
             with self.subTest(url=url):
                 self.assertIn('INVALID_URL', evaluate([resource(url=url)])['resources'][0]['reasons'])
 
