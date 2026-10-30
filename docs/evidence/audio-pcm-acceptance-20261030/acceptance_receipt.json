@@ -1,0 +1,110 @@
+{
+  "schema_version": "limited-synthetic-pcm-acceptance-1.0",
+  "acceptance_id": "PCM-ACCEPTANCE-20261030",
+  "status": "PASSED",
+  "scope": "Supplied offline integer-PCM module; bounded deterministic synthetic inputs only",
+  "recorded_utc": "2026-10-30T15:48:31.758465+00:00",
+  "recorded_asia_aden": "2026-10-30T18:48:31.758465+03:00",
+  "target_archive": {
+    "name": "Independent_QA_Audio_PCM_20261030.zip",
+    "sha256": "bb1eb9cf1fc5739c1b6c74dd7b4c6ef0e60cba6612c311ae2aa5607f94575115",
+    "bytes": 58503,
+    "entries": 32,
+    "crc_verified": true
+  },
+  "tested_module": {
+    "path": "package/source/qa_lab/audio_pcm.py",
+    "sha256": "2ec8dde53cb0afde7f2b1090dad6d14be8e408a108315486dbc38d5a8100f9b0"
+  },
+  "environment": {
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+    "fresh_python_versions": [
+      "3.12.14"
+    ],
+    "python_3_13_fresh_run": "NOT_RUN"
+  },
+  "fresh_packaged_tests": {
+    "distinct_tests": 76,
+    "repeats": 2,
+    "passed_per_run": [
+      76,
+      76
+    ],
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "unraisable_errors": 0,
+    "subtests_per_run": 14,
+    "synthetic_corpus_cases": 47,
+    "normalized_results_identical": true,
+    "normalized_result_sha256": "cd779f9624d62659dcfad96842b53c0e29e211e958eeaa03ed389761359c349e",
+    "summary": "replay/summary.json"
+  },
+  "fresh_independent_acceptance": {
+    "distinct_api_cases": 30,
+    "api_executions": 60,
+    "api_passed": 60,
+    "distinct_cli_cases": 3,
+    "cli_executions": 6,
+    "cli_passed": 6,
+    "repeats": 2,
+    "fixture_files": 30,
+    "fixture_total_bytes": 2744,
+    "fixture_max_bytes": 172,
+    "api_outputs_identical": true,
+    "cli_outputs_identical": true,
+    "source_unchanged": true,
+    "fixtures_unchanged": true,
+    "summary": "independent/run_02/summary.json"
+  },
+  "archive_review": {
+    "consistency_assertions": 131,
+    "assertions_passed": 131,
+    "sha256_manifest_entries_verified": 31,
+    "patch_postimages_verified": 9,
+    "archived_common_outputs_matching": 41,
+    "declared_differences": 6,
+    "legacy_original_tests_historical": 8,
+    "mutation_results_historical": 6,
+    "legacy_source_reexecuted": false,
+    "mutations_reexecuted": false,
+    "github_ci_live_queried": false,
+    "historical_ci_rerun": false,
+    "summary": "review_evidence/archive_audit.json"
+  },
+  "invariants": {
+    "package_unchanged_after_all_reviews": true,
+    "original_zip_unchanged": true,
+    "independent_harness_hash_matches_final_run": true,
+    "output_inside_source_rejected_before_writes": true,
+    "guard_exit": 1,
+    "guard_message": "Output must be outside the read-only source tree.",
+    "package_content_mode_mtime_unchanged": true,
+    "source_tree_file_set_unchanged": true,
+    "defaults_unchanged": true,
+    "min_duration_seconds": 0.001,
+    "max_duration_seconds": 300.0,
+    "max_input_bytes": 67108864,
+    "max_chunks": 4096
+  },
+  "review_observations": [
+    "audio_tests.log is an earlier 70-test run; strict_audio_tests.log is the archived final 76-test run. The new replay independently ran 76 twice.",
+    "Five stricter validation policies and one unsupported reduced-valid-bits variant are declared differences, not parity successes.",
+    "The new replay harness rejects output under source and treats default changes as acceptance failure. The final independent run used the hardened harness."
+  ],
+  "remaining_scope": {
+    "full_audio_profile_status": "PARTIAL",
+    "deployed_profile_comparison": "NOT_RUN",
+    "asr_tested": false,
+    "tts_quality_tested": false,
+    "production_accepted": false,
+    "full_repository_regression": "NOT_RUN",
+    "legacy_cli_parity": "NOT_RUN"
+  },
+  "remote_mutations_performed": false,
+  "reproduction": [
+    "PYTHONDONTWRITEBYTECODE=1 python -B acceptance_replay.py --package ./package --out ./replay-new",
+    "PYTHONDONTWRITEBYTECODE=1 python -B -W error::ResourceWarning independent/run_independent_acceptance.py --source ./package/source --output ./independent-new"
+  ]
+}
