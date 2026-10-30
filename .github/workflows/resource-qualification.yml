@@ -1,0 +1,28 @@
+name: Resource qualification regression
+on:
+  pull_request:
+    paths:
+      - 'qa_lab/resource_registry.py'
+      - 'tests/test_resource_registry.py'
+      - 'docs/RESOURCE_REGISTRY.md'
+      - '.github/workflows/resource-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax check
+        run: python -m py_compile qa_lab/resource_registry.py tests/test_resource_registry.py
+      - name: Run resource qualification regressions
+        run: python -m unittest discover -s tests -p 'test_resource_registry.py' -v
