@@ -28,6 +28,12 @@ def validate_submission(req):
 
 class PostgreSQLHandler(BaseHTTPRequestHandler):
     queue = None
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(5)
+    def log_message(self, format, *args):
+        # Do not log request paths or supplied media.
+        pass
     def reply(self, status, obj):
         data=json.dumps(obj,ensure_ascii=False).encode('utf-8')
         self.send_response(status)
@@ -39,7 +45,8 @@ class PostgreSQLHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
     def authorized(self):
         token=os.environ.get('QA_API_TOKEN','')
-        return bool(token) and hmac.compare_digest(self.headers.get('Authorization',''),'Bearer '+token)
+        values=self.headers.get_all('Authorization',[])
+        return bool(token) and len(values)==1 and hmac.compare_digest(values[0].encode('utf-8'),('Bearer '+token).encode('utf-8'))
     def do_GET(self):
         path=urlsplit(self.path).path
         if path=='/healthz': return self.reply(200,{'status':'ok','backend':'postgres'})
@@ -50,6 +57,9 @@ class PostgreSQLHandler(BaseHTTPRequestHandler):
         return self.reply(404,{'error':'not_found'})
     def do_POST(self):
         if not self.authorized():return self.reply(401,{'error':'unauthorized'})
+        if urlsplit(self.path).path=='/v1/audio-runs':
+            from .audio_jobs import post
+            return post(self)
         if urlsplit(self.path).path!='/v1/runs':return self.reply(404,{'error':'not_found'})
         try:
             length=int(self.headers.get('Content-Length','0'))
