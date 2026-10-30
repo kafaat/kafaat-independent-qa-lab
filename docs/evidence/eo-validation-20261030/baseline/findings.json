@@ -1,0 +1,265 @@
+{
+  "schema_version": "eo-baseline-findings-1.0",
+  "evidence_kind": "BASELINE_ONLY_BEFORE_REPAIRS",
+  "summary_created_utc": "2026-10-30T16:22:00.835506+00:00",
+  "new_executions_performed_for_this_summary": false,
+  "scope": "Original supplied delta and deliberately modified isolated negative-control copies; not the repaired integration or current repository acceptance.",
+  "original_zip": {
+    "path": "upload/SAHOOL_EO_Validation_Delta_20261030(1).zip",
+    "sha256": "d4a4fe50a42821eeaa0d6a60725ef23183f1b9d80731aa8bf8fb6876787d303a",
+    "bytes": 2376543,
+    "members": 47,
+    "crc_verified": true
+  },
+  "original_patch": {
+    "path": "eo_validation_review_20261030/input/SAHOOL_EO_Validation_Delta_20261030.patch",
+    "sha256": "9383e473409e6e177456b4b84244381c9364ba5a19fe032bfa17dc2443963bbc",
+    "bytes": 1686819,
+    "new_files": 38,
+    "apply_check": "PASS",
+    "apply": "PASS",
+    "reverse_check": "PASS",
+    "all_38_result_files_match_payload": true
+  },
+  "integrity": {
+    "outer_manifest_verified": 46,
+    "outer_manifest_entries": 46,
+    "inner_manifest_verified": 37,
+    "inner_manifest_entries": 37,
+    "payload_files": 38,
+    "coverage_excludes_only_each_manifest_itself": true,
+    "original_input_content_mode_mtime_unchanged": true,
+    "guard_source_unchanged_during_probes": true
+  },
+  "baseline_source": {
+    "guard_sha256": "783de861d69aba6972cee5dbb146835453ff1a8fb7294024ea2928e8150a3846",
+    "runner_sha256": "239e73556f6f534741cbb2ced231e902f072f16567199eaa90f1538c940eae71"
+  },
+  "baseline_execution": {
+    "status": "PASSED_OFFLINE_RESEARCH_ONLY",
+    "exit_code": 0,
+    "unit_tests": 17,
+    "unit_passed": 17,
+    "independent_cases": 18,
+    "independent_passed": 18,
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "dependency_origin": "Existing /tmp/sahool-ndvi-research-deps; not the later integration venv"
+  },
+  "runner_probe_method": "Only isolated package copies were changed. Modified reviewed-code probes explicitly re-pinned their changed file; omitted-manifest probe deliberately removed guard coverage. Original package remained unchanged.",
+  "reproduced_runner_false_passes": [
+    {
+      "case": "all_unit_tests_skipped",
+      "observed_exit_code": 0,
+      "observed_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_log_summary": [
+        "Ran 17 tests in 0.000s",
+        "OK (skipped=17)"
+      ],
+      "independent_cases": 18,
+      "independent_passed": 18,
+      "manifest_entries_recorded": 37,
+      "receipt": {
+        "path": "eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/run/result.json",
+        "sha256": "5843ba5256aaf4dabb7277aca102842764e788fd91ef91b7cd8ace8f232efe2b",
+        "bytes": 4369
+      }
+    },
+    {
+      "case": "false_independent_cases",
+      "observed_exit_code": 0,
+      "observed_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_log_summary": [
+        "Ran 17 tests in 0.295s",
+        "OK"
+      ],
+      "independent_cases": 18,
+      "independent_passed": 0,
+      "manifest_entries_recorded": 37,
+      "receipt": {
+        "path": "eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/run/result.json",
+        "sha256": "84e56ebff69d290a0019b818ce9202fa31cf6a09fd482f38252b84d5dbdbb122",
+        "bytes": 4369
+      }
+    },
+    {
+      "case": "unlisted_guard_change",
+      "observed_exit_code": 0,
+      "observed_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_log_summary": [
+        "Ran 17 tests in 0.262s",
+        "OK"
+      ],
+      "independent_cases": 18,
+      "independent_passed": 18,
+      "manifest_entries_recorded": 36,
+      "receipt": {
+        "path": "eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/run/result.json",
+        "sha256": "1731d17798ad0cab76fe718c67d69baf4cff2a7a672259cd235ef0f3ccc4d80c",
+        "bytes": 4270
+      }
+    },
+    {
+      "case": "one_unit_test",
+      "observed_exit_code": 0,
+      "observed_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_log_summary": [
+        "Ran 1 test in 0.000s",
+        "OK"
+      ],
+      "independent_cases": 18,
+      "independent_passed": 18,
+      "manifest_entries_recorded": 37,
+      "receipt": {
+        "path": "eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/run/result.json",
+        "sha256": "17a78e7c8bb817e290a21b31ce9506e83cb40c4049fb7ca9d100b06b2902eb01",
+        "bytes": 4369
+      }
+    }
+  ],
+  "excluded_from_false_passes": {
+    "case": "zero_unit_tests",
+    "observed_exit_code": 1,
+    "observed_status": "FAILED",
+    "false_pass_reproduced": false,
+    "reason": "Empty unittest suite already exited nonzero in the tested interpreter."
+  },
+  "guard_defects": [
+    {
+      "id": "EO-GUARD-001",
+      "case": "asset declares EPSG:32639 but item/window EPSG:32638",
+      "observed": "Conflicting asset EPSG override accepted despite item/window CRS mismatch.",
+      "returned_status": "DIAGNOSTIC_ONLY",
+      "common_numeric_pixels": 65536
+    },
+    {
+      "id": "EO-GUARD-002",
+      "case": "finite raw/scales produce infinite reflectance",
+      "observed": "Finite input fields overflowed during reflectance decoding; returned diagnostic contained nonfinite residuals, failed strict JSON serialization, and CLI emitted no JSON.",
+      "common_numeric_pixels": 0,
+      "strict_json_serialization_succeeded": false,
+      "cli_exit_code": 1,
+      "cli_stdout_empty": true
+    },
+    {
+      "id": "EO-GUARD-003",
+      "case": "exact equivalence inferred with zero finite decoded support",
+      "observed": "Exact-pair scale-only equivalence inferred with zero finite decoded numerical support.",
+      "common_raw_valid_pixels": 65536,
+      "common_numeric_pixels": 0,
+      "flag_assessment": "flag_inconsistent_with_exact_pair_scale_only_equivalence"
+    },
+    {
+      "id": "EO-GUARD-004",
+      "case": "nonrepresentable integer scale",
+      "observed": "Nonrepresentable integer scale raised an unhandled TypeError rather than a structured contract rejection.",
+      "exception": "TypeError"
+    },
+    {
+      "id": "EO-GUARD-005",
+      "case": "finite reflectance denominator overflows",
+      "observed": "Finite reflectance denominator overflow silently changed the NDVI ratio.",
+      "observed_ndvi": 0.0,
+      "expected_ndvi": 0.2,
+      "warnings": [
+        "overflow encountered in add"
+      ]
+    }
+  ],
+  "additional_baseline_evidence_weaknesses": [
+    {
+      "id": "EO-RUN-004",
+      "path": "run_checks.py",
+      "finding": "Receipt lacks run ID, start/finish times, actual commands, observed unit/independent counts, log digests, and recorded after manifest. Timeout branch discards partial subprocess output."
+    },
+    {
+      "id": "EO-RUN-005",
+      "path": "encoding_guard/test_guard.py",
+      "finding": "Unit fixtures use TemporaryDirectory within encoding_guard source folder; they clean up normally but require a writable copied source directory. Original input archive was not executed in place."
+    }
+  ],
+  "source_artifacts": [
+    {
+      "id": "delta_review",
+      "path": "eo_validation_review_20261030/patch_trial/review_evidence/eo_delta_review.json",
+      "sha256": "3b98c7cabb37a876fa5b7822d5c91cd140a92abc8ed406acefcc604846595872",
+      "bytes": 11209
+    },
+    {
+      "id": "runner_probes",
+      "path": "eo_validation_review_20261030/patch_trial/review_evidence/runner_false_pass_probes.json",
+      "sha256": "f7d44172abb1638b4f910468cea9d772360488868e0b3cdfa3c32d15af5b2a96",
+      "bytes": 5566
+    },
+    {
+      "id": "guard_probes",
+      "path": "eo_validation_review_20261030/guard_review/guard_edge_results.json",
+      "sha256": "2946a1582c8527f2ace49ff7e4e3d3c72fd7b7db4820adb67b2b945bbf80a8e2",
+      "bytes": 4615
+    },
+    {
+      "id": "baseline_receipt",
+      "path": "eo_validation_review_20261030/patch_trial/fresh_baseline/result.json",
+      "sha256": "a2783311f1415570bb227e657cc83fc8e2505a18006c5450aeb4930d5438aa08",
+      "bytes": 4369
+    },
+    {
+      "id": "baseline_unit_log",
+      "path": "eo_validation_review_20261030/patch_trial/fresh_baseline/unit.log",
+      "sha256": "bbc94413e5bef70ed3600a680a7517a1fee2a0e829ea25ce4a73bc0e5c2584ae",
+      "bytes": 1674
+    },
+    {
+      "id": "baseline_independent_result",
+      "path": "eo_validation_review_20261030/patch_trial/fresh_baseline/independent.json",
+      "sha256": "84bbd3ec5dca0fa0696faef0dac08d4df6e987ccb7fe200c4ef5649a32e0a8ec",
+      "bytes": 2314
+    },
+    {
+      "id": "baseline_independent_log",
+      "path": "eo_validation_review_20261030/patch_trial/fresh_baseline/independent.log",
+      "sha256": "48b1ce24e2d54e174ad943159e2adf44667521eb1e3a16d16cd455f057ae0655",
+      "bytes": 1683
+    },
+    {
+      "id": "baseline_command",
+      "path": "eo_validation_review_20261030/patch_trial/review_evidence/baseline_command.json",
+      "sha256": "ce20d2e3b33cd689ae309b6da0f6a2139eff574dc382f7668a1aaad5cb9a057d",
+      "bytes": 703
+    },
+    {
+      "id": "patch_application",
+      "path": "eo_validation_review_20261030/patch_trial/review_evidence/patch_application.json",
+      "sha256": "992d6bfdaaf3d193913d9d2ad59d226e20a590b61ecef02aefdacfbe347a8c67",
+      "bytes": 1276
+    },
+    {
+      "id": "patch_payload_match",
+      "path": "eo_validation_review_20261030/patch_trial/review_evidence/patch_payload_match.json",
+      "sha256": "116a9e1842ec6a75530ee2f276d7313f4590ad0f3dfd84e69bf61edddd64a3a7",
+      "bytes": 4790
+    },
+    {
+      "id": "original_inputs_before",
+      "path": "eo_validation_review_20261030/patch_trial/review_evidence/input_before.json",
+      "sha256": "e67a018c27b94b9ed69cd6839b7aad4812100bd91b031c33f23aea77ca814208",
+      "bytes": 10331
+    },
+    {
+      "id": "original_inputs_after",
+      "path": "eo_validation_review_20261030/patch_trial/review_evidence/input_after.json",
+      "sha256": "e67a018c27b94b9ed69cd6839b7aad4812100bd91b031c33f23aea77ca814208",
+      "bytes": 10331
+    }
+  ],
+  "artifact_path_base": "Paths are relative to the original workspace root; SHA-256 identifies evidence bytes independently of later publication paths.",
+  "limitations": {
+    "production_approved": false,
+    "physical_radiometric_accuracy_verified": false,
+    "c1_is_ground_truth": false,
+    "comparison_authority": "Paired C1 representation consistency only; C1 does not establish physical truth.",
+    "sahool_production_defects_established": false,
+    "network_or_deployed_pipeline_verified": false,
+    "baseline_counts_are_not_final_repaired_counts": true
+  }
+}

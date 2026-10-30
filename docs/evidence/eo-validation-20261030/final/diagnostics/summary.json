@@ -1,0 +1,46 @@
+{
+  "status": "DIAGNOSTIC_ONLY",
+  "automatic_correction_authorized": false,
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "numpy": "2.5.4",
+  "guard_sha256": "cd9f8bd177f9b82f34d083c4060930a51ea8350707215e040119a1871f46e8c1",
+  "rows": [
+    {
+      "sample": "yemen",
+      "datetime": "2022-03-21T07:45:28.756000Z",
+      "processing_baseline": "05.10",
+      "numeric_pixels": 65536,
+      "vegetation_pixels": 62,
+      "old_declared_rmse": 0.17375857573905445,
+      "scale_only_hypothesis_rmse": 8.028595272924281e-17,
+      "red_residual_pixels": 0,
+      "nir_residual_pixels": 0,
+      "flag_assessment": "flag_inconsistent_with_exact_pair_scale_only_equivalence"
+    },
+    {
+      "sample": "yemen_march_selected",
+      "datetime": "2022-03-21T07:45:28.756000Z",
+      "processing_baseline": "05.10",
+      "numeric_pixels": 65536,
+      "vegetation_pixels": 448,
+      "old_declared_rmse": 0.1667694049107631,
+      "scale_only_hypothesis_rmse": 9.395678178873666e-05,
+      "red_residual_pixels": 7,
+      "nir_residual_pixels": 0,
+      "flag_assessment": "pair_residuals_present_no_automatic_flag_resolution"
+    },
+    {
+      "sample": "yemen_december_fixed_window",
+      "datetime": "2022-12-06T07:45:26.317000Z",
+      "processing_baseline": "05.09",
+      "numeric_pixels": 65536,
+      "vegetation_pixels": 12520,
+      "old_declared_rmse": 0.2154179143654081,
+      "scale_only_hypothesis_rmse": 8.238766630761053e-17,
+      "red_residual_pixels": 0,
+      "nir_residual_pixels": 0,
+      "flag_assessment": "flag_declares_prior_application_reapplying_offset_hazard"
+    }
+  ],
+  "archived_normal_case_metrics_preserved": true
+}

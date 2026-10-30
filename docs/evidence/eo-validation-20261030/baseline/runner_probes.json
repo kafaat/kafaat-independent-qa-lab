@@ -1,0 +1,125 @@
+[
+  {
+    "probe": "zero_unit_tests",
+    "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/package",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+      "-B",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/package/run_checks.py",
+      "--output-dir",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/run"
+    ],
+    "returncode": 1,
+    "seconds": 0.13984799700119765,
+    "stdout": "{\"status\": \"FAILED\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/run\"}\n",
+    "stderr": "",
+    "receipt_status": "FAILED",
+    "unit_summary": [
+      "Ran 0 tests in 0.000s"
+    ],
+    "independent_cases": null,
+    "independent_passed": null,
+    "manifest_entries": 37,
+    "input_files_reported": 37,
+    "expected_rejection": true,
+    "false_pass_reproduced": false
+  },
+  {
+    "probe": "all_unit_tests_skipped",
+    "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/package",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+      "-B",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/package/run_checks.py",
+      "--output-dir",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/run"
+    ],
+    "returncode": 0,
+    "seconds": 0.8695507280062884,
+    "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/run\"}\n",
+    "stderr": "",
+    "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+    "unit_summary": [
+      "Ran 17 tests in 0.000s",
+      "OK (skipped=17)"
+    ],
+    "independent_cases": 18,
+    "independent_passed": 18,
+    "manifest_entries": 37,
+    "input_files_reported": 37,
+    "expected_rejection": true,
+    "false_pass_reproduced": true
+  },
+  {
+    "probe": "false_independent_cases",
+    "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/package",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+      "-B",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/package/run_checks.py",
+      "--output-dir",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/run"
+    ],
+    "returncode": 0,
+    "seconds": 0.5903932340006577,
+    "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/run\"}\n",
+    "stderr": "",
+    "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+    "unit_summary": [
+      "Ran 17 tests in 0.295s",
+      "OK"
+    ],
+    "independent_cases": 18,
+    "independent_passed": 0,
+    "manifest_entries": 37,
+    "input_files_reported": 37,
+    "expected_rejection": true,
+    "false_pass_reproduced": true
+  },
+  {
+    "probe": "unlisted_guard_change",
+    "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/package",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+      "-B",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/package/run_checks.py",
+      "--output-dir",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/run"
+    ],
+    "returncode": 0,
+    "seconds": 1.2189523429988185,
+    "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/run\"}\n",
+    "stderr": "",
+    "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+    "unit_summary": [
+      "Ran 17 tests in 0.262s",
+      "OK"
+    ],
+    "independent_cases": 18,
+    "independent_passed": 18,
+    "manifest_entries": 36,
+    "input_files_reported": 36,
+    "expected_rejection": true,
+    "false_pass_reproduced": true
+  },
+  {
+    "probe": "one_unit_test",
+    "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/package",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+      "-B",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/package/run_checks.py",
+      "--output-dir",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/run"
+    ],
+    "returncode": 0,
+    "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/run\"}\n",
+    "stderr": "",
+    "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+    "unit_summary": [
+      "Ran 1 test in 0.000s",
+      "OK"
+    ],
+    "false_pass_reproduced": true
+  }
+]

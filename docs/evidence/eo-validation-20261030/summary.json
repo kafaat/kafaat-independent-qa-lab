@@ -1,0 +1,166 @@
+{
+  "schema": "eo-reviewed-integration-1",
+  "recorded_at_utc": "2026-10-30T16:23:20.846918+00:00",
+  "status": "PASSED_LOCAL_OFFLINE_RESEARCH",
+  "production_approved": false,
+  "base_commit": "775ebf1ca37a1e76a509971950eccffc5affaad3",
+  "base_context": "PCM evidence PR #25 already merged; this is a separate experimental EO addition.",
+  "original_attachment": {
+    "path": "upload/SAHOOL_EO_Validation_Delta_20261030(1).zip",
+    "sha256": "d4a4fe50a42821eeaa0d6a60725ef23183f1b9d80731aa8bf8fb6876787d303a",
+    "bytes": 2376543,
+    "members": 47,
+    "crc_verified": true
+  },
+  "original_patch": {
+    "path": "eo_validation_review_20261030/input/SAHOOL_EO_Validation_Delta_20261030.patch",
+    "sha256": "9383e473409e6e177456b4b84244381c9364ba5a19fe032bfa17dc2443963bbc",
+    "bytes": 1686819,
+    "new_files": 38,
+    "apply_check": "PASS",
+    "apply": "PASS",
+    "reverse_check": "PASS",
+    "all_38_result_files_match_payload": true
+  },
+  "integrity": {
+    "outer_manifest_verified": 46,
+    "outer_manifest_entries": 46,
+    "inner_manifest_verified": 37,
+    "inner_manifest_entries": 37,
+    "payload_files": 38,
+    "coverage_excludes_only_each_manifest_itself": true,
+    "original_input_content_mode_mtime_unchanged": true,
+    "guard_source_unchanged_during_probes": true,
+    "original_input_files_reverified": 47,
+    "original_inputs_still_unchanged": true,
+    "published_fixture_files_unchanged": 30
+  },
+  "final_package": {
+    "files_including_manifest": 43,
+    "manifest_entries": 42,
+    "manifest_sha256": "a74be8ecdf19ef2ecee5cfe92cdc075103d433b33e6986fd0c0491a551689cff",
+    "package_sha256": "dd0c5cb65a835742f6cdfc7fadf313f387d4deded99668b3faab060dc229dc29",
+    "guard_sha256": "cd9f8bd177f9b82f34d083c4060930a51ea8350707215e040119a1871f46e8c1",
+    "runner_sha256": "c81913a068268a0d85074fba88f6780fe68ccfbd0b4e88b0c15179ff6429b025",
+    "workflow_sha256": "f33c8c97dceba22352de6565a50881a32d64fdea1007c4e335ba908555e55b37"
+  },
+  "execution": {
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "runner_regression_tests": {
+      "tests_run": 12,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "unraisable_errors": [],
+      "status": "PASSED"
+    },
+    "guard_unit_tests": {
+      "run": 26,
+      "passed": 26,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "independent_checks": {
+      "run": 18,
+      "passed": 18
+    },
+    "counts_are_distinct_validation_layers": true,
+    "receipt": "final/acceptance/result.json",
+    "receipt_sha256": "1d164c430f3649153c9187e5306e55e6d00b2f5ed400a3193c038e91d1a508d7",
+    "run_id": "9e7318ba-b3a2-42dc-8d4a-db6eb20c2ead",
+    "source_unchanged_during_execution": true,
+    "git_identity": {
+      "available": true,
+      "checkout_commit": "775ebf1ca37a1e76a509971950eccffc5affaad3",
+      "checkout_tree": "74495940dc2823af27d562eece037d6ea718b799",
+      "repository_dirty": true,
+      "package_dirty": true,
+      "status_sha256": "bd449137b3a7288bf12afb62ffad5114d65dc4edb0c8b5a89786b140b55ca1df",
+      "tested_clean_commit": false,
+      "scope": "Checkout identity; tested bytes are bound separately by package hashes"
+    },
+    "identity_note": "Local acceptance ran before commit. The dirty checkout identity is preserved; exact tested bytes are bound separately. This is not a claim of CI execution on a clean commit."
+  },
+  "diagnostics": {
+    "status": "DIAGNOSTIC_ONLY",
+    "automatic_correction_authorized": false,
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "numpy": "2.5.4",
+    "guard_sha256": "cd9f8bd177f9b82f34d083c4060930a51ea8350707215e040119a1871f46e8c1",
+    "rows": [
+      {
+        "sample": "yemen",
+        "datetime": "2022-03-21T07:45:28.756000Z",
+        "processing_baseline": "05.10",
+        "numeric_pixels": 65536,
+        "vegetation_pixels": 62,
+        "old_declared_rmse": 0.17375857573905445,
+        "scale_only_hypothesis_rmse": 8.028595272924281e-17,
+        "red_residual_pixels": 0,
+        "nir_residual_pixels": 0,
+        "flag_assessment": "flag_inconsistent_with_exact_pair_scale_only_equivalence"
+      },
+      {
+        "sample": "yemen_march_selected",
+        "datetime": "2022-03-21T07:45:28.756000Z",
+        "processing_baseline": "05.10",
+        "numeric_pixels": 65536,
+        "vegetation_pixels": 448,
+        "old_declared_rmse": 0.1667694049107631,
+        "scale_only_hypothesis_rmse": 9.395678178873666e-05,
+        "red_residual_pixels": 7,
+        "nir_residual_pixels": 0,
+        "flag_assessment": "pair_residuals_present_no_automatic_flag_resolution"
+      },
+      {
+        "sample": "yemen_december_fixed_window",
+        "datetime": "2022-12-06T07:45:26.317000Z",
+        "processing_baseline": "05.09",
+        "numeric_pixels": 65536,
+        "vegetation_pixels": 12520,
+        "old_declared_rmse": 0.2154179143654081,
+        "scale_only_hypothesis_rmse": 8.238766630761053e-17,
+        "red_residual_pixels": 0,
+        "nir_residual_pixels": 0,
+        "flag_assessment": "flag_declares_prior_application_reapplying_offset_hazard"
+      }
+    ],
+    "archived_normal_case_metrics_preserved": true
+  },
+  "review": {
+    "baseline_findings": "baseline/findings.json",
+    "guard_fixes": [
+      "asset CRS overrides",
+      "unrepresentable numeric metadata",
+      "nonfinite derived reflectance and NDVI",
+      "nonfinite residual/statistics",
+      "structured CLI rejection"
+    ],
+    "runner_fixes": [
+      "exact unit identities and observed counts",
+      "reject skips and unraisable errors",
+      "exact independent identities, row outcomes and guard hash",
+      "complete source manifest coverage and before/after binding",
+      "external output/temp directories and timeouts with partial logs",
+      "accurate dirty nested Git package identity"
+    ],
+    "independent_publication_review": "PASS",
+    "workflow_yaml_parsed": true
+  },
+  "scope": {
+    "changed_areas": [
+      "tools/eo-validation",
+      ".github/workflows/eo-offline-validation.yml",
+      "docs/evidence/eo-validation-20261030"
+    ],
+    "public_satellite_windows": 3,
+    "acquisition_dates": 2,
+    "network_during_validation": false,
+    "production_pipeline_tested": false,
+    "automatic_image_correction": false,
+    "default_worker_or_api_registration_changed": false
+  },
+  "reproduce": "See tools/eo-validation/README_AR.md; install reviewed dependency, run test_run_checks.py, then run_checks.py with a new output directory outside the package."
+}

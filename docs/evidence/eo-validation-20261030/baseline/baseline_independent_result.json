@@ -1,0 +1,104 @@
+{
+  "guard_sha256": "783de861d69aba6972cee5dbb146835453ff1a8fb7294024ea2928e8150a3846",
+  "cases": [
+    {
+      "case": "scl_asset_transform_mismatch",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "c1: SCL window/full transform conflict"
+    },
+    {
+      "case": "scl_source_window_mismatch",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "c1: SCL window/full transform conflict"
+    },
+    {
+      "case": "nonfinite_raw",
+      "passed": true,
+      "outcome": "returned",
+      "detail": null
+    },
+    {
+      "case": "zero_denominator",
+      "passed": true,
+      "outcome": "returned",
+      "detail": null
+    },
+    {
+      "case": "product_mismatch",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "identity mismatch: s2:product_uri"
+    },
+    {
+      "case": "grid_mismatch",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "c1_nir: window grid mismatch"
+    },
+    {
+      "case": "missing_offset",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "old_red: missing/nonfinite offset"
+    },
+    {
+      "case": "shape_mismatch",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "old_nir: array shape mismatch"
+    },
+    {
+      "case": "unknown_flag",
+      "passed": true,
+      "outcome": "returned",
+      "detail": null
+    },
+    {
+      "case": "all_invalid",
+      "passed": true,
+      "outcome": "returned",
+      "detail": null
+    },
+    {
+      "case": "nodata_zero_without_mask",
+      "passed": true,
+      "outcome": "returned",
+      "detail": null
+    },
+    {
+      "case": "scl_shift",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "c1: aligned SCL differs from source nearest cells"
+    },
+    {
+      "case": "scl_url_mismatch",
+      "passed": true,
+      "outcome": "Rejected",
+      "detail": "old: SCL source URL mismatch"
+    },
+    {
+      "case": "quality_flags_no_clamp",
+      "passed": true
+    },
+    {
+      "case": "real_yemen",
+      "passed": true
+    },
+    {
+      "case": "real_yemen_march_selected",
+      "passed": true
+    },
+    {
+      "case": "real_yemen_december_fixed_window",
+      "passed": true
+    },
+    {
+      "case": "source_and_inputs_unchanged",
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}

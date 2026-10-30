@@ -1,0 +1,133 @@
+{
+  "numpy": "2.5.4",
+  "guard_sha256": "783de861d69aba6972cee5dbb146835453ff1a8fb7294024ea2928e8150a3846",
+  "source_unchanged": true,
+  "findings": [
+    {
+      "case": "asset declares EPSG:32639 but item/window EPSG:32638",
+      "returned": true,
+      "status": "DIAGNOSTIC_ONLY",
+      "common_raw_valid_pixels": 65536,
+      "common_numeric_pixels": 65536,
+      "flag_assessment": "pair_residuals_present_no_automatic_flag_resolution",
+      "band_residuals": {
+        "red": {
+          "support_pixels": 65536,
+          "scale_only_residual_pixels": 7,
+          "residual_old_dn_equal_one": 7,
+          "max_reflectance_residual": 0.003799999999999995
+        },
+        "nir": {
+          "support_pixels": 65536,
+          "scale_only_residual_pixels": 0,
+          "residual_old_dn_equal_one": 0,
+          "max_reflectance_residual": 1.1102230246251565e-16
+        }
+      },
+      "strict_json": true,
+      "warnings": []
+    },
+    {
+      "case": "finite raw/scales produce infinite reflectance",
+      "returned": true,
+      "status": "DIAGNOSTIC_ONLY",
+      "common_raw_valid_pixels": 65536,
+      "common_numeric_pixels": 0,
+      "flag_assessment": "pair_residuals_present_no_automatic_flag_resolution",
+      "band_residuals": {
+        "red": {
+          "support_pixels": 65536,
+          "scale_only_residual_pixels": 7,
+          "residual_old_dn_equal_one": 7,
+          "max_reflectance_residual": {
+            "nonfinite": "nan"
+          }
+        },
+        "nir": {
+          "support_pixels": 65536,
+          "scale_only_residual_pixels": 0,
+          "residual_old_dn_equal_one": 0,
+          "max_reflectance_residual": {
+            "nonfinite": "nan"
+          }
+        }
+      },
+      "strict_json": false,
+      "serialization_error": "Out of range float values are not JSON compliant: nan",
+      "warnings": [
+        "invalid value encountered in subtract",
+        "overflow encountered in multiply"
+      ],
+      "cli_exit": 1,
+      "cli_stdout": "",
+      "cli_stderr_last_lines": [
+        "  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py\", line 406, in _iterencode_dict",
+        "    yield from chunks",
+        "  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py\", line 398, in _iterencode_dict",
+        "    yield _floatstr(value)",
+        "          ^^^^^^^^^^^^^^^^",
+        "  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py\", line 240, in floatstr",
+        "    raise ValueError(",
+        "ValueError: Out of range float values are not JSON compliant: nan"
+      ]
+    },
+    {
+      "case": "exact equivalence inferred with zero finite decoded support",
+      "returned": true,
+      "status": "DIAGNOSTIC_ONLY",
+      "common_raw_valid_pixels": 65536,
+      "common_numeric_pixels": 0,
+      "flag_assessment": "flag_inconsistent_with_exact_pair_scale_only_equivalence",
+      "band_residuals": {
+        "red": {
+          "support_pixels": 65536,
+          "scale_only_residual_pixels": 0,
+          "residual_old_dn_equal_one": 0,
+          "max_reflectance_residual": {
+            "nonfinite": "nan"
+          }
+        },
+        "nir": {
+          "support_pixels": 65536,
+          "scale_only_residual_pixels": 0,
+          "residual_old_dn_equal_one": 0,
+          "max_reflectance_residual": {
+            "nonfinite": "nan"
+          }
+        }
+      },
+      "strict_json": false,
+      "serialization_error": "Out of range float values are not JSON compliant: nan",
+      "warnings": [
+        "invalid value encountered in subtract",
+        "overflow encountered in multiply"
+      ]
+    },
+    {
+      "case": "nonrepresentable integer scale",
+      "returned": false,
+      "exception": "TypeError",
+      "message": "ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''",
+      "warnings": []
+    },
+    {
+      "case": "finite reflectance denominator overflows",
+      "observed_ndvi": 0.0,
+      "expected_ndvi": 0.2,
+      "flags": {
+        "nodata": false,
+        "nonfinite_reflectance": false,
+        "negative_reflectance": false,
+        "near_zero_denominator_numerical_only": false,
+        "scl_cloud": false,
+        "scl_shadow": false,
+        "scl_nodata_or_defective": false,
+        "scl_invalid_label": false,
+        "outside_minus1_plus1": false
+      },
+      "warnings": [
+        "overflow encountered in add"
+      ]
+    }
+  ]
+}

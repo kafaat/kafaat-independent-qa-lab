@@ -1,0 +1,82 @@
+[
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/review_evidence/eo_delta_review.json",
+    "published_path": "baseline/delta_review.json",
+    "sha256": "3b98c7cabb37a876fa5b7822d5c91cd140a92abc8ed406acefcc604846595872"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/review_evidence/runner_false_pass_probes.json",
+    "published_path": "baseline/runner_probes.json",
+    "sha256": "f7d44172abb1638b4f910468cea9d772360488868e0b3cdfa3c32d15af5b2a96"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/guard_review/guard_edge_results.json",
+    "published_path": "baseline/guard_probes.json",
+    "sha256": "2946a1582c8527f2ace49ff7e4e3d3c72fd7b7db4820adb67b2b945bbf80a8e2"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/fresh_baseline/result.json",
+    "published_path": "baseline/baseline_receipt.json",
+    "sha256": "a2783311f1415570bb227e657cc83fc8e2505a18006c5450aeb4930d5438aa08"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/fresh_baseline/unit.log",
+    "published_path": "baseline/baseline_unit_log.log",
+    "sha256": "bbc94413e5bef70ed3600a680a7517a1fee2a0e829ea25ce4a73bc0e5c2584ae"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/fresh_baseline/independent.json",
+    "published_path": "baseline/baseline_independent_result.json",
+    "sha256": "84bbd3ec5dca0fa0696faef0dac08d4df6e987ccb7fe200c4ef5649a32e0a8ec"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/fresh_baseline/independent.log",
+    "published_path": "baseline/baseline_independent_log.log",
+    "sha256": "48b1ce24e2d54e174ad943159e2adf44667521eb1e3a16d16cd455f057ae0655"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/review_evidence/baseline_command.json",
+    "published_path": "baseline/baseline_command.json",
+    "sha256": "ce20d2e3b33cd689ae309b6da0f6a2139eff574dc382f7668a1aaad5cb9a057d"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/review_evidence/patch_application.json",
+    "published_path": "baseline/patch_application.json",
+    "sha256": "992d6bfdaaf3d193913d9d2ad59d226e20a590b61ecef02aefdacfbe347a8c67"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/review_evidence/patch_payload_match.json",
+    "published_path": "baseline/patch_payload_match.json",
+    "sha256": "116a9e1842ec6a75530ee2f276d7313f4590ad0f3dfd84e69bf61edddd64a3a7"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/review_evidence/input_before.json",
+    "published_path": "baseline/original_inputs_before.json",
+    "sha256": "e67a018c27b94b9ed69cd6839b7aad4812100bd91b031c33f23aea77ca814208"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/review_evidence/input_after.json",
+    "published_path": "baseline/original_inputs_after.json",
+    "sha256": "e67a018c27b94b9ed69cd6839b7aad4812100bd91b031c33f23aea77ca814208"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/run/result.json",
+    "published_path": "baseline/probes/all_unit_tests_skipped.json",
+    "sha256": "5843ba5256aaf4dabb7277aca102842764e788fd91ef91b7cd8ace8f232efe2b"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/run/result.json",
+    "published_path": "baseline/probes/false_independent_cases.json",
+    "sha256": "84e56ebff69d290a0019b818ce9202fa31cf6a09fd482f38252b84d5dbdbb122"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/run/result.json",
+    "published_path": "baseline/probes/unlisted_guard_change.json",
+    "sha256": "1731d17798ad0cab76fe718c67d69baf4cff2a7a672259cd235ef0f3ccc4d80c"
+  },
+  {
+    "original_path": "eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/run/result.json",
+    "published_path": "baseline/probes/one_unit_test.json",
+    "sha256": "17a78e7c8bb817e290a21b31ce9506e83cb40c4049fb7ca9d100b06b2902eb01"
+  }
+]
