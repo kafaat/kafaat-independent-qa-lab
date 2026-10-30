@@ -1,0 +1,473 @@
+{
+  "schema": "eo-offline-run-2",
+  "run_id": "9e7318ba-b3a2-42dc-8d4a-db6eb20c2ead",
+  "started_at": "2026-10-30T16:17:56.093521+00:00",
+  "status": "PASSED_OFFLINE_RESEARCH_ONLY",
+  "production_approved": false,
+  "invocation": {
+    "interpreter": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/venv/bin/python",
+    "argv": [
+      "tools/eo-validation/run_checks.py",
+      "--output-dir",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/validation/final/acceptance"
+    ]
+  },
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+    "numpy": "2.5.4",
+    "numpy_module_path": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/venv/lib/python3.12/site-packages/numpy/__init__.py",
+    "subprocess_overrides": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONHASHSEED": "0",
+      "TMPDIR": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/validation/final/acceptance/temporary"
+    }
+  },
+  "ci_context": {
+    "scope": "Declared CI environment metadata; not host attestation",
+    "values": {}
+  },
+  "expected_unit_ids": [
+    "test_guard.GuardTests.test_all_nodata_has_null_statistics",
+    "test_guard.GuardTests.test_asset_crs_conflicts_rejected",
+    "test_guard.GuardTests.test_cli_numeric_rejection_is_structured",
+    "test_guard.GuardTests.test_decoded_reflectance_overflow_rejected",
+    "test_guard.GuardTests.test_empty_decoded_support_cannot_infer_equivalence",
+    "test_guard.GuardTests.test_empty_identity",
+    "test_guard.GuardTests.test_finite_ndvi_ratio_preserved",
+    "test_guard.GuardTests.test_full_grid_mismatch",
+    "test_guard.GuardTests.test_huge_integer_encoding_fields_rejected",
+    "test_guard.GuardTests.test_identity_mismatch",
+    "test_guard.GuardTests.test_input_changed_during_run_rejected",
+    "test_guard.GuardTests.test_joint_window_metadata_lie",
+    "test_guard.GuardTests.test_malformed_asset_crs_overrides_rejected",
+    "test_guard.GuardTests.test_matching_asset_crs_overrides_accepted",
+    "test_guard.GuardTests.test_missing_scale_rejected",
+    "test_guard.GuardTests.test_nan_and_nodata_excluded_independently",
+    "test_guard.GuardTests.test_ndvi_arithmetic_overflow_rejected",
+    "test_guard.GuardTests.test_negative_and_zero_denominator_not_clamped",
+    "test_guard.GuardTests.test_nonfinite_offset_rejected",
+    "test_guard.GuardTests.test_real_three_samples",
+    "test_guard.GuardTests.test_scl_alignment_rejected",
+    "test_guard.GuardTests.test_scl_full_transform_mismatch",
+    "test_guard.GuardTests.test_scl_source_window_mismatch",
+    "test_guard.GuardTests.test_shape_mismatch",
+    "test_guard.GuardTests.test_unknown_flag_is_not_default_false",
+    "test_guard.GuardTests.test_window_grid_mismatch"
+  ],
+  "expected_independent_ids": [
+    "all_invalid",
+    "grid_mismatch",
+    "missing_offset",
+    "nodata_zero_without_mask",
+    "nonfinite_raw",
+    "product_mismatch",
+    "quality_flags_no_clamp",
+    "real_yemen",
+    "real_yemen_december_fixed_window",
+    "real_yemen_march_selected",
+    "scl_asset_transform_mismatch",
+    "scl_shift",
+    "scl_source_window_mismatch",
+    "scl_url_mismatch",
+    "shape_mismatch",
+    "source_and_inputs_unchanged",
+    "unknown_flag",
+    "zero_denominator"
+  ],
+  "stages": [
+    {
+      "stage": "unit",
+      "command": [
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/venv/bin/python",
+        "-B",
+        "-W",
+        "error::ResourceWarning",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/work/repo/tools/eo-validation/run_unit_checks.py",
+        "--output",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/validation/final/acceptance/unit.json"
+      ],
+      "cwd": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/validation/final/acceptance/work-unit",
+      "started_at": "2026-10-30T16:17:56.239400+00:00",
+      "finished_at": "2026-10-30T16:17:57.333720+00:00",
+      "duration_seconds": 1.0943222070054617,
+      "timeout_seconds": 120,
+      "exit_code": 0,
+      "reason": null,
+      "log_sha256": {
+        "unit.stdout.log": "22a39a39f3335d3e6c97599cce2919332c5c5edaa6d8a7eaf03d0e9f45d263ee",
+        "unit.stderr.log": "d87133a11eaf6556f971e82874fe46523e8cb6d674c970e1a8635ddf15d5bd9a",
+        "unit.log": "aaf1bf2245f674f95675a42212a0ef64b6290b604b73e4bbe5bcb680d98748bb"
+      },
+      "result_validated": true
+    },
+    {
+      "stage": "independent",
+      "command": [
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/venv/bin/python",
+        "-B",
+        "-W",
+        "error::ResourceWarning",
+        "-c",
+        "import gc, json, runpy, sys\nerrors = []\nsys.unraisablehook = lambda e: errors.append(type(e.exc_value).__name__)\nsys.argv = sys.argv[1:]\ncode = 0\ntry:\n    runpy.run_path(sys.argv[0], run_name='__main__')\nexcept SystemExit as exc:\n    code = exc.code\ngc.collect()\nif errors:\n    print(json.dumps({'unraisable_errors': errors}), file=sys.stderr)\n    raise SystemExit(1)\nraise SystemExit(code)\n",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/work/repo/tools/eo-validation/encoding_guard_review/review.py",
+        "--evidence-root",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/work/repo/tools/eo-validation",
+        "--output",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/validation/final/acceptance/independent.json"
+      ],
+      "cwd": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/validation/final/acceptance/work-independent",
+      "started_at": "2026-10-30T16:17:57.333923+00:00",
+      "finished_at": "2026-10-30T16:17:57.992490+00:00",
+      "duration_seconds": 0.6585772440012079,
+      "timeout_seconds": 120,
+      "exit_code": 0,
+      "reason": null,
+      "log_sha256": {
+        "independent.stdout.log": "48b1ce24e2d54e174ad943159e2adf44667521eb1e3a16d16cd455f057ae0655",
+        "independent.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "independent.log": "48b1ce24e2d54e174ad943159e2adf44667521eb1e3a16d16cd455f057ae0655"
+      },
+      "result_validated": true
+    }
+  ],
+  "reasons": [],
+  "scope": "Offline research: three archived public satellite windows and adversarial fixtures; no network/API/PostGIS benchmark",
+  "source_before": {
+    "files": {
+      ".gitignore": "22bc478fc0eb97818e8c2efd9a6c8f9dce55490bdd8074a3f2b6b8653c5c12d5",
+      "DATA_SOURCES.md": "95262f1da36f3778c081185de7c772b81764fb177fe8eaeb68d95f8161b409f1",
+      "README_AR.md": "1bae505a09e82519903454b68382df53d4a7c58c68dbd0c0c15bd2613f31e576",
+      "acceptance_contract.py": "00688e756882c17e0a7593c67f8c18c2fc7a98d0b74a986c61a4744bce16dc13",
+      "encoding_guard/guard.py": "cd9f8bd177f9b82f34d083c4060930a51ea8350707215e040119a1871f46e8c1",
+      "encoding_guard/test_guard.py": "d6fda848937ede3914abb09fb595fc0b60d58134aac2e84a583c13a71875b394",
+      "encoding_guard_review/review.py": "cad70759016278b01137a7a54bbdaa1b527476e6fb245665df0c44e9dc2b6fb0",
+      "requirements-ci.txt": "faa63d59d6bd56bd700c05ee73cfec75bcdc96f81278a3e9e428ecf3075b3b0b",
+      "requirements.txt": "738071c1d9633f276433ad6738de256d2bf0d22f66dc4bd3179012bebb63bdd1",
+      "run_checks.py": "c81913a068268a0d85074fba88f6780fe68ccfbd0b4e88b0c15179ff6429b025",
+      "run_unit_checks.py": "c4451a85924dd6a6dda70a8bd7bfe7a10fc25850e24e4a0e8dd21b2d2c1414c1",
+      "test_run_checks.py": "e25dbac37df73516d8ff746ea259e332bc9f8fbeba77fd900cd261bf7c420549",
+      "yemen/c1_item.json": "cc72bac2c4ece47dcfd45d8b0c3a5e86aa3d3347664156729605d3f0f972f03d",
+      "yemen/c1_nir.npz": "376952b3ff57ec55aee1b9e1d0ecdbab88a0d06a7ab3a1a440bccb9e6e74e76f",
+      "yemen/c1_red.npz": "d9e144b5fcb1dd639fd0945b7e691fbfc3a29c75ecc991715c078d9196ffe81a",
+      "yemen/c1_scl.npz": "f320270dba0610800517f22f21ef8eba13948779b74d6e04a400f244f1d61b12",
+      "yemen/old_item.json": "201b3e79a732034dadfaffbbce51bde492bb743e5d035386f39ebe9aec03e8af",
+      "yemen/old_nir.npz": "32c9a9a6740bbc0be540101338b75a6e3378ed3c90dab52d2d38f2b23a4e4ca4",
+      "yemen/old_red.npz": "c65775907c44e2ea4c34e01b406fd815bdf24ab18ad649664906f9b3f913eef1",
+      "yemen/old_scl.npz": "f320270dba0610800517f22f21ef8eba13948779b74d6e04a400f244f1d61b12",
+      "yemen/window_metadata.json": "1bcaf8939afb6fc0a7723aaa0417c49db8f880f83ac8363ca9c5b7d0b780a712",
+      "yemen/yemen_comparison.json": "924f3e48793a9524bbcc13d26077a599a124e3e8b4363c3557a3f4608ddf6d78",
+      "yemen_december_fixed_window/c1_item.json": "d63e89ae69c8e1ae0a78ff8795b42b8799fa76db75a08deca05325631a45c677",
+      "yemen_december_fixed_window/c1_nir.npz": "c8a1945009524990b5b5396e72494efba00a6d6438270492c29018af6b23f8ce",
+      "yemen_december_fixed_window/c1_red.npz": "3ba6780253061c3a20c35ef7c73017e6fd3fb90a5ad8fb8fdd361a0043428b05",
+      "yemen_december_fixed_window/c1_scl.npz": "430cf95c01da6a65cb7ba86447a2ae16cdc8347716eec4b655496f2d26106660",
+      "yemen_december_fixed_window/old_item.json": "418ed53c5e7007720347c1aed20d470c9e8dd594fe14e00da01d01fd02b49f99",
+      "yemen_december_fixed_window/old_nir.npz": "5f0781af6cc1a071b6c018c25305cad65951d7862e1fded537ed2f0405f5339f",
+      "yemen_december_fixed_window/old_red.npz": "a5ca3637eeaa782fda94fedd5e63c16ba0e9ffe7ad1d6d2000e0107a1e9fc98e",
+      "yemen_december_fixed_window/old_scl.npz": "430cf95c01da6a65cb7ba86447a2ae16cdc8347716eec4b655496f2d26106660",
+      "yemen_december_fixed_window/window_metadata.json": "0388df2d6d51dccecefe371a6018512421b7d832f4d718b51c3ba706f13c0c29",
+      "yemen_december_fixed_window/yemen_comparison.json": "39a3bf8ce45dd9f353edba8e626cb7b58e496fdc3a2e6ba94c8c1db3dc4ca5c4",
+      "yemen_march_selected/c1_item.json": "cc72bac2c4ece47dcfd45d8b0c3a5e86aa3d3347664156729605d3f0f972f03d",
+      "yemen_march_selected/c1_nir.npz": "24c663846b609d709cbb9d89de287c36ad75e69bad8a07b5896c7d0a34e136a6",
+      "yemen_march_selected/c1_red.npz": "e4410249de69fb9e079e9c097739389f6bf7c9836353e039763d43e8f86bb909",
+      "yemen_march_selected/c1_scl.npz": "1d824ec57ed6ad1228b5e6c34b6eabb1f1ea2b264518fa7d1b2ec59a29784399",
+      "yemen_march_selected/old_item.json": "201b3e79a732034dadfaffbbce51bde492bb743e5d035386f39ebe9aec03e8af",
+      "yemen_march_selected/old_nir.npz": "52fa652849037f204f10e301da981a4ea11cbe433d5b460f32f11f151d01c0ce",
+      "yemen_march_selected/old_red.npz": "0dfe79f79d17ce8a6482c8686bf15179acb8f8d2d190676a0e70356e475824fc",
+      "yemen_march_selected/old_scl.npz": "1d824ec57ed6ad1228b5e6c34b6eabb1f1ea2b264518fa7d1b2ec59a29784399",
+      "yemen_march_selected/window_metadata.json": "58a7b87c6d97f8900a07f912e4072a2c9d8e05d0f5607fea9a1323d8b7acd890",
+      "yemen_march_selected/yemen_comparison.json": "5fabf683d2a453f8363c98626941258f3a2c01783dd04526f2550ff041d3bc1b"
+    },
+    "manifest_sha256": "a74be8ecdf19ef2ecee5cfe92cdc075103d433b33e6986fd0c0491a551689cff",
+    "package_sha256": "dd0c5cb65a835742f6cdfc7fadf313f387d4deded99668b3faab060dc229dc29"
+  },
+  "git_before": {
+    "available": true,
+    "checkout_commit": "775ebf1ca37a1e76a509971950eccffc5affaad3",
+    "checkout_tree": "74495940dc2823af27d562eece037d6ea718b799",
+    "repository_dirty": true,
+    "package_dirty": true,
+    "status_sha256": "bd449137b3a7288bf12afb62ffad5114d65dc4edb0c8b5a89786b140b55ca1df",
+    "tested_clean_commit": false,
+    "scope": "Checkout identity; tested bytes are bound separately by package hashes"
+  },
+  "unit_result": {
+    "schema": "eo-unit-result-1",
+    "status": "PASSED",
+    "expected_ids": [
+      "test_guard.GuardTests.test_all_nodata_has_null_statistics",
+      "test_guard.GuardTests.test_asset_crs_conflicts_rejected",
+      "test_guard.GuardTests.test_cli_numeric_rejection_is_structured",
+      "test_guard.GuardTests.test_decoded_reflectance_overflow_rejected",
+      "test_guard.GuardTests.test_empty_decoded_support_cannot_infer_equivalence",
+      "test_guard.GuardTests.test_empty_identity",
+      "test_guard.GuardTests.test_finite_ndvi_ratio_preserved",
+      "test_guard.GuardTests.test_full_grid_mismatch",
+      "test_guard.GuardTests.test_huge_integer_encoding_fields_rejected",
+      "test_guard.GuardTests.test_identity_mismatch",
+      "test_guard.GuardTests.test_input_changed_during_run_rejected",
+      "test_guard.GuardTests.test_joint_window_metadata_lie",
+      "test_guard.GuardTests.test_malformed_asset_crs_overrides_rejected",
+      "test_guard.GuardTests.test_matching_asset_crs_overrides_accepted",
+      "test_guard.GuardTests.test_missing_scale_rejected",
+      "test_guard.GuardTests.test_nan_and_nodata_excluded_independently",
+      "test_guard.GuardTests.test_ndvi_arithmetic_overflow_rejected",
+      "test_guard.GuardTests.test_negative_and_zero_denominator_not_clamped",
+      "test_guard.GuardTests.test_nonfinite_offset_rejected",
+      "test_guard.GuardTests.test_real_three_samples",
+      "test_guard.GuardTests.test_scl_alignment_rejected",
+      "test_guard.GuardTests.test_scl_full_transform_mismatch",
+      "test_guard.GuardTests.test_scl_source_window_mismatch",
+      "test_guard.GuardTests.test_shape_mismatch",
+      "test_guard.GuardTests.test_unknown_flag_is_not_default_false",
+      "test_guard.GuardTests.test_window_grid_mismatch"
+    ],
+    "collected_ids": [
+      "test_guard.GuardTests.test_all_nodata_has_null_statistics",
+      "test_guard.GuardTests.test_asset_crs_conflicts_rejected",
+      "test_guard.GuardTests.test_cli_numeric_rejection_is_structured",
+      "test_guard.GuardTests.test_decoded_reflectance_overflow_rejected",
+      "test_guard.GuardTests.test_empty_decoded_support_cannot_infer_equivalence",
+      "test_guard.GuardTests.test_empty_identity",
+      "test_guard.GuardTests.test_finite_ndvi_ratio_preserved",
+      "test_guard.GuardTests.test_full_grid_mismatch",
+      "test_guard.GuardTests.test_huge_integer_encoding_fields_rejected",
+      "test_guard.GuardTests.test_identity_mismatch",
+      "test_guard.GuardTests.test_input_changed_during_run_rejected",
+      "test_guard.GuardTests.test_joint_window_metadata_lie",
+      "test_guard.GuardTests.test_malformed_asset_crs_overrides_rejected",
+      "test_guard.GuardTests.test_matching_asset_crs_overrides_accepted",
+      "test_guard.GuardTests.test_missing_scale_rejected",
+      "test_guard.GuardTests.test_nan_and_nodata_excluded_independently",
+      "test_guard.GuardTests.test_ndvi_arithmetic_overflow_rejected",
+      "test_guard.GuardTests.test_negative_and_zero_denominator_not_clamped",
+      "test_guard.GuardTests.test_nonfinite_offset_rejected",
+      "test_guard.GuardTests.test_real_three_samples",
+      "test_guard.GuardTests.test_scl_alignment_rejected",
+      "test_guard.GuardTests.test_scl_full_transform_mismatch",
+      "test_guard.GuardTests.test_scl_source_window_mismatch",
+      "test_guard.GuardTests.test_shape_mismatch",
+      "test_guard.GuardTests.test_unknown_flag_is_not_default_false",
+      "test_guard.GuardTests.test_window_grid_mismatch"
+    ],
+    "executed_ids": [
+      "test_guard.GuardTests.test_all_nodata_has_null_statistics",
+      "test_guard.GuardTests.test_asset_crs_conflicts_rejected",
+      "test_guard.GuardTests.test_cli_numeric_rejection_is_structured",
+      "test_guard.GuardTests.test_decoded_reflectance_overflow_rejected",
+      "test_guard.GuardTests.test_empty_decoded_support_cannot_infer_equivalence",
+      "test_guard.GuardTests.test_empty_identity",
+      "test_guard.GuardTests.test_finite_ndvi_ratio_preserved",
+      "test_guard.GuardTests.test_full_grid_mismatch",
+      "test_guard.GuardTests.test_huge_integer_encoding_fields_rejected",
+      "test_guard.GuardTests.test_identity_mismatch",
+      "test_guard.GuardTests.test_input_changed_during_run_rejected",
+      "test_guard.GuardTests.test_joint_window_metadata_lie",
+      "test_guard.GuardTests.test_malformed_asset_crs_overrides_rejected",
+      "test_guard.GuardTests.test_matching_asset_crs_overrides_accepted",
+      "test_guard.GuardTests.test_missing_scale_rejected",
+      "test_guard.GuardTests.test_nan_and_nodata_excluded_independently",
+      "test_guard.GuardTests.test_ndvi_arithmetic_overflow_rejected",
+      "test_guard.GuardTests.test_negative_and_zero_denominator_not_clamped",
+      "test_guard.GuardTests.test_nonfinite_offset_rejected",
+      "test_guard.GuardTests.test_real_three_samples",
+      "test_guard.GuardTests.test_scl_alignment_rejected",
+      "test_guard.GuardTests.test_scl_full_transform_mismatch",
+      "test_guard.GuardTests.test_scl_source_window_mismatch",
+      "test_guard.GuardTests.test_shape_mismatch",
+      "test_guard.GuardTests.test_unknown_flag_is_not_default_false",
+      "test_guard.GuardTests.test_window_grid_mismatch"
+    ],
+    "collection_matches": true,
+    "tests_run": 26,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "expected_failures": 0,
+    "unexpected_successes": 0,
+    "unraisable_errors": [],
+    "source_sha256": {
+      "encoding_guard/guard.py": "cd9f8bd177f9b82f34d083c4060930a51ea8350707215e040119a1871f46e8c1",
+      "encoding_guard/test_guard.py": "d6fda848937ede3914abb09fb595fc0b60d58134aac2e84a583c13a71875b394",
+      "run_unit_checks.py": "c4451a85924dd6a6dda70a8bd7bfe7a10fc25850e24e4a0e8dd21b2d2c1414c1",
+      "acceptance_contract.py": "00688e756882c17e0a7593c67f8c18c2fc7a98d0b74a986c61a4744bce16dc13"
+    }
+  },
+  "independent_result": {
+    "guard_sha256": "cd9f8bd177f9b82f34d083c4060930a51ea8350707215e040119a1871f46e8c1",
+    "cases": [
+      {
+        "case": "scl_asset_transform_mismatch",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "c1: SCL window/full transform conflict"
+      },
+      {
+        "case": "scl_source_window_mismatch",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "c1: SCL window/full transform conflict"
+      },
+      {
+        "case": "nonfinite_raw",
+        "passed": true,
+        "outcome": "returned",
+        "detail": null
+      },
+      {
+        "case": "zero_denominator",
+        "passed": true,
+        "outcome": "returned",
+        "detail": null
+      },
+      {
+        "case": "product_mismatch",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "identity mismatch: s2:product_uri"
+      },
+      {
+        "case": "grid_mismatch",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "c1_nir: window grid mismatch"
+      },
+      {
+        "case": "missing_offset",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "old_red: missing/nonfinite offset"
+      },
+      {
+        "case": "shape_mismatch",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "old_nir: array shape mismatch"
+      },
+      {
+        "case": "unknown_flag",
+        "passed": true,
+        "outcome": "returned",
+        "detail": null
+      },
+      {
+        "case": "all_invalid",
+        "passed": true,
+        "outcome": "returned",
+        "detail": null
+      },
+      {
+        "case": "nodata_zero_without_mask",
+        "passed": true,
+        "outcome": "returned",
+        "detail": null
+      },
+      {
+        "case": "scl_shift",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "c1: aligned SCL differs from source nearest cells"
+      },
+      {
+        "case": "scl_url_mismatch",
+        "passed": true,
+        "outcome": "Rejected",
+        "detail": "old: SCL source URL mismatch"
+      },
+      {
+        "case": "quality_flags_no_clamp",
+        "passed": true
+      },
+      {
+        "case": "real_yemen",
+        "passed": true
+      },
+      {
+        "case": "real_yemen_march_selected",
+        "passed": true
+      },
+      {
+        "case": "real_yemen_december_fixed_window",
+        "passed": true
+      },
+      {
+        "case": "source_and_inputs_unchanged",
+        "passed": true
+      }
+    ],
+    "all_passed": true
+  },
+  "source_after": {
+    "files": {
+      ".gitignore": "22bc478fc0eb97818e8c2efd9a6c8f9dce55490bdd8074a3f2b6b8653c5c12d5",
+      "DATA_SOURCES.md": "95262f1da36f3778c081185de7c772b81764fb177fe8eaeb68d95f8161b409f1",
+      "README_AR.md": "1bae505a09e82519903454b68382df53d4a7c58c68dbd0c0c15bd2613f31e576",
+      "acceptance_contract.py": "00688e756882c17e0a7593c67f8c18c2fc7a98d0b74a986c61a4744bce16dc13",
+      "encoding_guard/guard.py": "cd9f8bd177f9b82f34d083c4060930a51ea8350707215e040119a1871f46e8c1",
+      "encoding_guard/test_guard.py": "d6fda848937ede3914abb09fb595fc0b60d58134aac2e84a583c13a71875b394",
+      "encoding_guard_review/review.py": "cad70759016278b01137a7a54bbdaa1b527476e6fb245665df0c44e9dc2b6fb0",
+      "requirements-ci.txt": "faa63d59d6bd56bd700c05ee73cfec75bcdc96f81278a3e9e428ecf3075b3b0b",
+      "requirements.txt": "738071c1d9633f276433ad6738de256d2bf0d22f66dc4bd3179012bebb63bdd1",
+      "run_checks.py": "c81913a068268a0d85074fba88f6780fe68ccfbd0b4e88b0c15179ff6429b025",
+      "run_unit_checks.py": "c4451a85924dd6a6dda70a8bd7bfe7a10fc25850e24e4a0e8dd21b2d2c1414c1",
+      "test_run_checks.py": "e25dbac37df73516d8ff746ea259e332bc9f8fbeba77fd900cd261bf7c420549",
+      "yemen/c1_item.json": "cc72bac2c4ece47dcfd45d8b0c3a5e86aa3d3347664156729605d3f0f972f03d",
+      "yemen/c1_nir.npz": "376952b3ff57ec55aee1b9e1d0ecdbab88a0d06a7ab3a1a440bccb9e6e74e76f",
+      "yemen/c1_red.npz": "d9e144b5fcb1dd639fd0945b7e691fbfc3a29c75ecc991715c078d9196ffe81a",
+      "yemen/c1_scl.npz": "f320270dba0610800517f22f21ef8eba13948779b74d6e04a400f244f1d61b12",
+      "yemen/old_item.json": "201b3e79a732034dadfaffbbce51bde492bb743e5d035386f39ebe9aec03e8af",
+      "yemen/old_nir.npz": "32c9a9a6740bbc0be540101338b75a6e3378ed3c90dab52d2d38f2b23a4e4ca4",
+      "yemen/old_red.npz": "c65775907c44e2ea4c34e01b406fd815bdf24ab18ad649664906f9b3f913eef1",
+      "yemen/old_scl.npz": "f320270dba0610800517f22f21ef8eba13948779b74d6e04a400f244f1d61b12",
+      "yemen/window_metadata.json": "1bcaf8939afb6fc0a7723aaa0417c49db8f880f83ac8363ca9c5b7d0b780a712",
+      "yemen/yemen_comparison.json": "924f3e48793a9524bbcc13d26077a599a124e3e8b4363c3557a3f4608ddf6d78",
+      "yemen_december_fixed_window/c1_item.json": "d63e89ae69c8e1ae0a78ff8795b42b8799fa76db75a08deca05325631a45c677",
+      "yemen_december_fixed_window/c1_nir.npz": "c8a1945009524990b5b5396e72494efba00a6d6438270492c29018af6b23f8ce",
+      "yemen_december_fixed_window/c1_red.npz": "3ba6780253061c3a20c35ef7c73017e6fd3fb90a5ad8fb8fdd361a0043428b05",
+      "yemen_december_fixed_window/c1_scl.npz": "430cf95c01da6a65cb7ba86447a2ae16cdc8347716eec4b655496f2d26106660",
+      "yemen_december_fixed_window/old_item.json": "418ed53c5e7007720347c1aed20d470c9e8dd594fe14e00da01d01fd02b49f99",
+      "yemen_december_fixed_window/old_nir.npz": "5f0781af6cc1a071b6c018c25305cad65951d7862e1fded537ed2f0405f5339f",
+      "yemen_december_fixed_window/old_red.npz": "a5ca3637eeaa782fda94fedd5e63c16ba0e9ffe7ad1d6d2000e0107a1e9fc98e",
+      "yemen_december_fixed_window/old_scl.npz": "430cf95c01da6a65cb7ba86447a2ae16cdc8347716eec4b655496f2d26106660",
+      "yemen_december_fixed_window/window_metadata.json": "0388df2d6d51dccecefe371a6018512421b7d832f4d718b51c3ba706f13c0c29",
+      "yemen_december_fixed_window/yemen_comparison.json": "39a3bf8ce45dd9f353edba8e626cb7b58e496fdc3a2e6ba94c8c1db3dc4ca5c4",
+      "yemen_march_selected/c1_item.json": "cc72bac2c4ece47dcfd45d8b0c3a5e86aa3d3347664156729605d3f0f972f03d",
+      "yemen_march_selected/c1_nir.npz": "24c663846b609d709cbb9d89de287c36ad75e69bad8a07b5896c7d0a34e136a6",
+      "yemen_march_selected/c1_red.npz": "e4410249de69fb9e079e9c097739389f6bf7c9836353e039763d43e8f86bb909",
+      "yemen_march_selected/c1_scl.npz": "1d824ec57ed6ad1228b5e6c34b6eabb1f1ea2b264518fa7d1b2ec59a29784399",
+      "yemen_march_selected/old_item.json": "201b3e79a732034dadfaffbbce51bde492bb743e5d035386f39ebe9aec03e8af",
+      "yemen_march_selected/old_nir.npz": "52fa652849037f204f10e301da981a4ea11cbe433d5b460f32f11f151d01c0ce",
+      "yemen_march_selected/old_red.npz": "0dfe79f79d17ce8a6482c8686bf15179acb8f8d2d190676a0e70356e475824fc",
+      "yemen_march_selected/old_scl.npz": "1d824ec57ed6ad1228b5e6c34b6eabb1f1ea2b264518fa7d1b2ec59a29784399",
+      "yemen_march_selected/window_metadata.json": "58a7b87c6d97f8900a07f912e4072a2c9d8e05d0f5607fea9a1323d8b7acd890",
+      "yemen_march_selected/yemen_comparison.json": "5fabf683d2a453f8363c98626941258f3a2c01783dd04526f2550ff041d3bc1b"
+    },
+    "manifest_sha256": "a74be8ecdf19ef2ecee5cfe92cdc075103d433b33e6986fd0c0491a551689cff",
+    "package_sha256": "dd0c5cb65a835742f6cdfc7fadf313f387d4deded99668b3faab060dc229dc29"
+  },
+  "source_unchanged": true,
+  "git_after": {
+    "available": true,
+    "checkout_commit": "775ebf1ca37a1e76a509971950eccffc5affaad3",
+    "checkout_tree": "74495940dc2823af27d562eece037d6ea718b799",
+    "repository_dirty": true,
+    "package_dirty": true,
+    "status_sha256": "bd449137b3a7288bf12afb62ffad5114d65dc4edb0c8b5a89786b140b55ca1df",
+    "tested_clean_commit": false,
+    "scope": "Checkout identity; tested bytes are bound separately by package hashes"
+  },
+  "temporary_files_remaining": [],
+  "finished_at": "2026-10-30T16:17:58.009453+00:00",
+  "duration_seconds": 1.915935447002994,
+  "artifact_sha256": {
+    "unit.json": "7f39cda2e217d20d40f811d7ee662aa8fc8913558d1e6f4e42f13fff4d3f1314",
+    "independent.log": "48b1ce24e2d54e174ad943159e2adf44667521eb1e3a16d16cd455f057ae0655",
+    "independent.stdout.log": "48b1ce24e2d54e174ad943159e2adf44667521eb1e3a16d16cd455f057ae0655",
+    "independent.json": "dc2b54194735054b8f54433188129e061782651fb3afc710470e161ba40d49dc",
+    "independent.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "unit.stderr.log": "d87133a11eaf6556f971e82874fe46523e8cb6d674c970e1a8635ddf15d5bd9a",
+    "unit.log": "aaf1bf2245f674f95675a42212a0ef64b6290b604b73e4bbe5bcb680d98748bb",
+    "unit.stdout.log": "22a39a39f3335d3e6c97599cce2919332c5c5edaa6d8a7eaf03d0e9f45d263ee"
+  }
+}

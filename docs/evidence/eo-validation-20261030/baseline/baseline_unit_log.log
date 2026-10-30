@@ -1,0 +1,22 @@
+test_all_nodata_has_null_statistics (test_guard.GuardTests.test_all_nodata_has_null_statistics) ... ok
+test_empty_identity (test_guard.GuardTests.test_empty_identity) ... ok
+test_full_grid_mismatch (test_guard.GuardTests.test_full_grid_mismatch) ... ok
+test_identity_mismatch (test_guard.GuardTests.test_identity_mismatch) ... ok
+test_input_changed_during_run_rejected (test_guard.GuardTests.test_input_changed_during_run_rejected) ... ok
+test_joint_window_metadata_lie (test_guard.GuardTests.test_joint_window_metadata_lie) ... ok
+test_missing_scale_rejected (test_guard.GuardTests.test_missing_scale_rejected) ... ok
+test_nan_and_nodata_excluded_independently (test_guard.GuardTests.test_nan_and_nodata_excluded_independently) ... ok
+test_negative_and_zero_denominator_not_clamped (test_guard.GuardTests.test_negative_and_zero_denominator_not_clamped) ... ok
+test_nonfinite_offset_rejected (test_guard.GuardTests.test_nonfinite_offset_rejected) ... ok
+test_real_three_samples (test_guard.GuardTests.test_real_three_samples) ... ok
+test_scl_alignment_rejected (test_guard.GuardTests.test_scl_alignment_rejected) ... ok
+test_scl_full_transform_mismatch (test_guard.GuardTests.test_scl_full_transform_mismatch) ... ok
+test_scl_source_window_mismatch (test_guard.GuardTests.test_scl_source_window_mismatch) ... ok
+test_shape_mismatch (test_guard.GuardTests.test_shape_mismatch) ... ok
+test_unknown_flag_is_not_default_false (test_guard.GuardTests.test_unknown_flag_is_not_default_false) ... ok
+test_window_grid_mismatch (test_guard.GuardTests.test_window_grid_mismatch) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.296s
+
+OK

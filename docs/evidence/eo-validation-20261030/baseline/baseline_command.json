@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+    "-B",
+    "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/repo/tools/eo-validation/run_checks.py",
+    "--output-dir",
+    "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/fresh_baseline"
+  ],
+  "returncode": 0,
+  "seconds": 1.2205392489995575,
+  "env_overrides": {
+    "PYTHONPATH": "/tmp/sahool-ndvi-research-deps",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/fresh_baseline\"}\n",
+  "stderr": ""
+}

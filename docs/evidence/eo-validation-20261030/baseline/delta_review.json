@@ -1,0 +1,226 @@
+{
+  "schema_version": "eo-delta-independent-review-1.0",
+  "recorded_utc": "2026-10-30T16:06:31.885609+00:00",
+  "original_zip": {
+    "path": "upload/SAHOOL_EO_Validation_Delta_20261030(1).zip",
+    "sha256": "d4a4fe50a42821eeaa0d6a60725ef23183f1b9d80731aa8bf8fb6876787d303a",
+    "members": 47,
+    "crc": "PASS"
+  },
+  "outer_manifest": {
+    "verified": 46,
+    "entries": 46,
+    "complete_coverage_except_self": true
+  },
+  "payload_manifest": {
+    "verified": 37,
+    "entries": 37,
+    "total_files": 38,
+    "complete_coverage_except_self": true
+  },
+  "binary_patch": {
+    "sha256": "9383e473409e6e177456b4b84244381c9364ba5a19fe032bfa17dc2443963bbc",
+    "git_apply_check": "PASS",
+    "git_apply": "PASS",
+    "git_apply_reverse_check": "PASS",
+    "files": 38,
+    "all_resulting_payload_bytes_match": true
+  },
+  "fresh_baseline": {
+    "status": "PASSED_OFFLINE_RESEARCH_ONLY",
+    "exit_code": 0,
+    "unit_tests_run": 17,
+    "unit_log_ok": 17,
+    "independent_cases": 18,
+    "independent_passed": 18,
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "dependency_path": "/tmp/sahool-ndvi-research-deps",
+    "logs": "../fresh_baseline/"
+  },
+  "inputs_content_mode_mtime_unchanged": true,
+  "false_pass_probes": [
+    {
+      "probe": "zero_unit_tests",
+      "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/package",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-B",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/package/run_checks.py",
+        "--output-dir",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/run"
+      ],
+      "returncode": 1,
+      "seconds": 0.13984799700119765,
+      "stdout": "{\"status\": \"FAILED\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/zero_unit_tests/run\"}\n",
+      "stderr": "",
+      "receipt_status": "FAILED",
+      "unit_summary": [
+        "Ran 0 tests in 0.000s"
+      ],
+      "independent_cases": null,
+      "independent_passed": null,
+      "manifest_entries": 37,
+      "input_files_reported": 37,
+      "expected_rejection": true,
+      "false_pass_reproduced": false
+    },
+    {
+      "probe": "all_unit_tests_skipped",
+      "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/package",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-B",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/package/run_checks.py",
+        "--output-dir",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/run"
+      ],
+      "returncode": 0,
+      "seconds": 0.8695507280062884,
+      "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/all_unit_tests_skipped/run\"}\n",
+      "stderr": "",
+      "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_summary": [
+        "Ran 17 tests in 0.000s",
+        "OK (skipped=17)"
+      ],
+      "independent_cases": 18,
+      "independent_passed": 18,
+      "manifest_entries": 37,
+      "input_files_reported": 37,
+      "expected_rejection": true,
+      "false_pass_reproduced": true
+    },
+    {
+      "probe": "false_independent_cases",
+      "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/package",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-B",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/package/run_checks.py",
+        "--output-dir",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/run"
+      ],
+      "returncode": 0,
+      "seconds": 0.5903932340006577,
+      "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/false_independent_cases/run\"}\n",
+      "stderr": "",
+      "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_summary": [
+        "Ran 17 tests in 0.295s",
+        "OK"
+      ],
+      "independent_cases": 18,
+      "independent_passed": 0,
+      "manifest_entries": 37,
+      "input_files_reported": 37,
+      "expected_rejection": true,
+      "false_pass_reproduced": true
+    },
+    {
+      "probe": "unlisted_guard_change",
+      "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/package",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-B",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/package/run_checks.py",
+        "--output-dir",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/run"
+      ],
+      "returncode": 0,
+      "seconds": 1.2189523429988185,
+      "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/unlisted_guard_change/run\"}\n",
+      "stderr": "",
+      "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_summary": [
+        "Ran 17 tests in 0.262s",
+        "OK"
+      ],
+      "independent_cases": 18,
+      "independent_passed": 18,
+      "manifest_entries": 36,
+      "input_files_reported": 36,
+      "expected_rejection": true,
+      "false_pass_reproduced": true
+    },
+    {
+      "probe": "one_unit_test",
+      "root": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/package",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-B",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/package/run_checks.py",
+        "--output-dir",
+        "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/run"
+      ],
+      "returncode": 0,
+      "stdout": "{\"status\": \"PASSED_OFFLINE_RESEARCH_ONLY\", \"output_dir\": \"/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/runner_probes/one_unit_test/run\"}\n",
+      "stderr": "",
+      "receipt_status": "PASSED_OFFLINE_RESEARCH_ONLY",
+      "unit_summary": [
+        "Ran 1 test in 0.000s",
+        "OK"
+      ],
+      "false_pass_reproduced": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "EO-RUN-001",
+      "priority": "high_for_acceptance_gate",
+      "path": "run_checks.py",
+      "lines": "49, 56-64, 77",
+      "finding": "Unit stage success uses subprocess exit code only; counts and skipped tests are not checked. One trivial test and all 17 skipped both yield PASSED while scope claims 17 unit tests.",
+      "action": "Emit machine-readable unit receipt, enforce exact intended test IDs/count, zero skips/failures/errors and preserved source identity."
+    },
+    {
+      "id": "EO-RUN-002",
+      "priority": "high_for_acceptance_gate",
+      "path": "run_checks.py",
+      "lines": "66-67",
+      "finding": "Independent receipt trusts all_passed true and len(cases)==18 without validating each passed flag, names/uniqueness, or guard_sha256. A stub with 18 false duplicate rows and wrong guard hash passes.",
+      "action": "Validate exact independent case set, strict bool passed values, all true and guard source hash bound to input manifest."
+    },
+    {
+      "id": "EO-RUN-003",
+      "priority": "medium_evidence",
+      "path": "run_checks.py",
+      "lines": "14-27",
+      "finding": "Manifest verifier checks listed paths only, without exact file-set coverage or required entries. Removing guard.py from manifest then changing it still passes. Original archive manifest coverage is complete.",
+      "action": "Require exact expected regular-file coverage excluding only manifest itself, reject missing required entries and include before/after manifest hash."
+    },
+    {
+      "id": "EO-RUN-004",
+      "priority": "medium_evidence",
+      "path": "run_checks.py",
+      "lines": "60-61,72-78",
+      "finding": "Receipt lacks run ID, start/finish times, actual commands, observed unit/independent counts, log digests, and recorded after manifest. Timeout branch discards partial subprocess output.",
+      "action": "At integration boundary bind actual source ref/tree and inputs, execution identity/interval/commands, stage outcome/counts and log hashes; preserve partial timeout logs."
+    },
+    {
+      "id": "EO-RUN-005",
+      "priority": "informational_isolation",
+      "path": "encoding_guard/test_guard.py",
+      "lines": "13",
+      "finding": "Unit fixtures use TemporaryDirectory within encoding_guard source folder; they clean up normally but require a writable copied source directory. Original input archive was not executed in place.",
+      "action": "Use an isolated disposable copied package for runs or move scratch fixtures to owned run output/TMPDIR in an integration change."
+    }
+  ],
+  "publication": {
+    "targeted_secret_pattern_hits": [],
+    "data_kind": "Public-source saved Sentinel-2 raster windows plus synthetic adversarial perturbations; not synthetic-only EO source data.",
+    "copernicus_modified_data_attribution_present": true,
+    "provider_attribution_present": "Element84 Earth Search",
+    "legacy_stac_license_link_present": true,
+    "license_link": "https://sentinel.esa.int/documents/247904/690755/Sentinel_Data_Legal_Notice",
+    "authored_software_license_file_present": false,
+    "official_legal_page_refetch": "UNAVAILABLE: web tool returned isError with empty content for both search and direct opens; no fresh legal interpretation claimed.",
+    "notes": [
+      "Preserve Contains modified Copernicus Sentinel data (2022), accessed through Element84 Earth Search attribution.",
+      "No standalone LICENSE for authored scripts is bundled; clarify repository license applicability in integration README.",
+      "Top-level original README_AR.txt includes a personal ChatGPT Library link; for public integration cite immutable public source/product links rather than rely on that inaccessible evidence link.",
+      "Do not promote baseline success to physical radiometric truth, user-farm validation, whole SAHOOL pipeline, network or deployed-worker acceptance."
+    ]
+  },
+  "recommendation": "Archive is intact and baseline runs correctly; fix runner false-pass/evidence gaps before using it as an enforced lab acceptance gate. Keep original input immutable and implement adaptations in an isolated integration branch."
+}

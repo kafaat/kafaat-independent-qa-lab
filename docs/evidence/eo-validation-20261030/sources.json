@@ -1,0 +1,70 @@
+[
+  {
+    "url": "https://raw.githubusercontent.com/Element84/earth-search/184b25376b9b2dcc5296bb5a4b0820e51fba039a/docs/collections/sentinel-2-l2a.md",
+    "requested_file": "element84_sentinel2.md",
+    "fetched_at_utc": "2026-10-30T16:09:01.655456+00:00",
+    "http_status": 200,
+    "final_url": "https://raw.githubusercontent.com/Element84/earth-search/184b25376b9b2dcc5296bb5a4b0820e51fba039a/docs/collections/sentinel-2-l2a.md",
+    "content_type": "text/plain; charset=utf-8",
+    "size_bytes": 5338,
+    "sha256": "6d84216c545eac491e511c24abff6830f28cff7715c94b92cebf589aa42fbbc6"
+  },
+  {
+    "url": "https://sentiwiki.copernicus.eu/web/s2-products",
+    "requested_file": "copernicus_s2_products.html",
+    "fetched_at_utc": "2026-10-30T16:09:01.656370+00:00",
+    "http_status": 200,
+    "final_url": "https://sentiwiki.copernicus.eu/web/s2-products",
+    "content_type": "text/html",
+    "size_bytes": 97860,
+    "sha256": "0d3e2cf6df2f9d47bc602649a69a1aabd5df269cde6a8a13216258c28dbaeb7f",
+    "title": "S2 Products | SentiWiki"
+  },
+  {
+    "url": "https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Process/Examples/S2L2A.html",
+    "requested_file": "copernicus_ndvi_example.html",
+    "fetched_at_utc": "2026-10-30T16:09:01.657039+00:00",
+    "http_status": 200,
+    "final_url": "https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Process/Examples/S2L2A.html",
+    "content_type": "text/html",
+    "size_bytes": 335223,
+    "sha256": "08e9509498356b4758a0c639ab8e1f08cff6020d4520c53d2514bf54e1a5e4d0",
+    "title": "Examples for S2L2A – Documentation"
+  },
+  {
+    "url": "https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice",
+    "requested_file": "sentinel_data_legal_notice.pdf",
+    "fetched_at_utc": "2026-10-30T16:09:01.658393+00:00",
+    "http_status": 200,
+    "final_url": "https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice",
+    "content_type": "application/pdf",
+    "size_bytes": 115881,
+    "sha256": "fa2955ff48a1d82e77fc7296d63681670ecdb9d2811a0505ae60d0683b62fa64",
+    "pages": 2
+  },
+  {
+    "url": "https://pypi.org/pypi/numpy/2.5.4/json",
+    "requested_file": "pypi_numpy_2_5_4.json",
+    "fetched_at_utc": "2026-10-30T16:09:01.659106+00:00",
+    "http_status": 200,
+    "final_url": "https://pypi.org/pypi/numpy/2.5.4/json",
+    "content_type": "application/json",
+    "size_bytes": 63149,
+    "sha256": "a42b40d53fac5388e974f21aa1f01d3b47440ad8181fc827b08023bf8ca3cc96",
+    "numpy": {
+      "version": "2.5.4",
+      "requires_python": ">=3.12",
+      "yanked": false,
+      "cp312_linux_x86_64_wheels": [
+        {
+          "filename": "numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a",
+          "upload_time_iso_8601": "2026-10-10T20:02:53.186780Z",
+          "size": 16727283,
+          "yanked": false
+        }
+      ],
+      "file_count": 66
+    }
+  }
+]

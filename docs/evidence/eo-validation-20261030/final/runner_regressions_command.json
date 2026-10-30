@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/venv/bin/python",
+    "-B",
+    "-W",
+    "error::ResourceWarning",
+    "-c",
+    "import gc,json,sys,unittest\nerrors=[]\nsys.unraisablehook=lambda e:errors.append(type(e.exc_value).__name__)\nsuite=unittest.defaultTestLoader.discover('tools/eo-validation',pattern='test_run_checks.py')\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\ngc.collect()\nsummary={'tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'skips':len(result.skipped),'unraisable_errors':errors}\nsummary['status']='PASSED' if result.wasSuccessful() and result.testsRun==12 and not result.skipped and not errors else 'FAILED'\nprint(json.dumps(summary))\nraise SystemExit(0 if summary['status']=='PASSED' else 1)\n"
+  ],
+  "cwd": "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/work/repo",
+  "exit_code": 0
+}

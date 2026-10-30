@@ -1,0 +1,120 @@
+{
+  "status": "DIAGNOSTIC_ONLY",
+  "automatic_correction_authorized": false,
+  "physical_accuracy_verified": false,
+  "scope": "same-product paired windows; C1 is a comparator, not ground truth",
+  "product_uri": "S2A_MSIL2A_20221206T073311_N0509_R049_T38PMC_20221206T124307.SAFE",
+  "shape": [
+    256,
+    256
+  ],
+  "total_pixels": 65536,
+  "common_raw_valid_pixels": 65536,
+  "common_numeric_pixels": 65536,
+  "numeric_exclusions_after_raw_mask": 0,
+  "source_invalid_or_nonfinite_pixels": 0,
+  "old_boa_offset_applied": true,
+  "flag_assessment": "flag_declares_prior_application_reapplying_offset_hazard",
+  "encodings": {
+    "old_red": {
+      "scale": 0.0001,
+      "offset": -0.1,
+      "nodata": 0
+    },
+    "old_nir": {
+      "scale": 0.0001,
+      "offset": -0.1,
+      "nodata": 0
+    },
+    "c1_red": {
+      "scale": 0.0001,
+      "offset": -0.1,
+      "nodata": 0
+    },
+    "c1_nir": {
+      "scale": 0.0001,
+      "offset": -0.1,
+      "nodata": 0
+    }
+  },
+  "band_residuals": {
+    "red": {
+      "support_pixels": 65536,
+      "scale_only_residual_pixels": 0,
+      "residual_old_dn_equal_one": 0,
+      "max_reflectance_residual": 5.551115123125783e-17
+    },
+    "nir": {
+      "support_pixels": 65536,
+      "scale_only_residual_pixels": 0,
+      "residual_old_dn_equal_one": 0,
+      "max_reflectance_residual": 1.1102230246251565e-16
+    }
+  },
+  "comparisons": {
+    "old_declared": {
+      "rmse": 0.2154179143654081,
+      "max_absolute": 0.9695538329120446,
+      "median_absolute": 0.09799906235964267,
+      "p95_absolute": 0.4928758357955434
+    },
+    "old_scale_only_hypothesis": {
+      "rmse": 8.238766630761053e-17,
+      "max_absolute": 3.3306690738754696e-16,
+      "median_absolute": 5.551115123125783e-17,
+      "p95_absolute": 1.6653345369377348e-16
+    }
+  },
+  "quality_flag_counts_overlapping": {
+    "c1_declared": {
+      "nodata": 0,
+      "nonfinite_reflectance": 0,
+      "negative_reflectance": 0,
+      "near_zero_denominator_numerical_only": 0,
+      "scl_cloud": 0,
+      "scl_shadow": 0,
+      "scl_nodata_or_defective": 0,
+      "scl_invalid_label": 0,
+      "outside_minus1_plus1": 0
+    },
+    "old_declared": {
+      "nodata": 0,
+      "nonfinite_reflectance": 0,
+      "negative_reflectance": 6492,
+      "near_zero_denominator_numerical_only": 0,
+      "scl_cloud": 0,
+      "scl_shadow": 0,
+      "scl_nodata_or_defective": 0,
+      "scl_invalid_label": 0,
+      "outside_minus1_plus1": 6492
+    },
+    "old_scale_only_hypothesis": {
+      "nodata": 0,
+      "nonfinite_reflectance": 0,
+      "negative_reflectance": 0,
+      "near_zero_denominator_numerical_only": 0,
+      "scl_cloud": 0,
+      "scl_shadow": 0,
+      "scl_nodata_or_defective": 0,
+      "scl_invalid_label": 0,
+      "outside_minus1_plus1": 0
+    }
+  },
+  "scl_agreement_fraction": 1.0,
+  "scl_vegetation_pixels": {
+    "old": 12520,
+    "c1": 12520
+  },
+  "input_sha256": {
+    "old_item.json": "418ed53c5e7007720347c1aed20d470c9e8dd594fe14e00da01d01fd02b49f99",
+    "c1_item.json": "d63e89ae69c8e1ae0a78ff8795b42b8799fa76db75a08deca05325631a45c677",
+    "window_metadata.json": "0388df2d6d51dccecefe371a6018512421b7d832f4d718b51c3ba706f13c0c29",
+    "old_red.npz": "a5ca3637eeaa782fda94fedd5e63c16ba0e9ffe7ad1d6d2000e0107a1e9fc98e",
+    "old_nir.npz": "5f0781af6cc1a071b6c018c25305cad65951d7862e1fded537ed2f0405f5339f",
+    "old_scl.npz": "430cf95c01da6a65cb7ba86447a2ae16cdc8347716eec4b655496f2d26106660",
+    "c1_red.npz": "3ba6780253061c3a20c35ef7c73017e6fd3fb90a5ad8fb8fdd361a0043428b05",
+    "c1_nir.npz": "c8a1945009524990b5b5396e72494efba00a6d6438270492c29018af6b23f8ce",
+    "c1_scl.npz": "430cf95c01da6a65cb7ba86447a2ae16cdc8347716eec4b655496f2d26106660"
+  },
+  "inputs_unchanged_during_run": true
+}

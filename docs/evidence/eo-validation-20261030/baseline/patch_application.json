@@ -1,0 +1,52 @@
+[
+  {
+    "command": [
+      "git",
+      "init",
+      "-q",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/repo"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "-C",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/repo",
+      "apply",
+      "--check",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/input/SAHOOL_EO_Validation_Delta_20261030.patch"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "-C",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/repo",
+      "apply",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/input/SAHOOL_EO_Validation_Delta_20261030.patch"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "-C",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/patch_trial/repo",
+      "apply",
+      "--reverse",
+      "--check",
+      "/workspace/scratch/2aad71f96474/eo_validation_review_20261030/input/SAHOOL_EO_Validation_Delta_20261030.patch"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+]

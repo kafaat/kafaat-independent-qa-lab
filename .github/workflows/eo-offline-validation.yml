@@ -1,0 +1,46 @@
+name: Offline EO research validation
+on:
+  pull_request:
+    paths:
+      - 'tools/eo-validation/**'
+      - '.github/workflows/eo-offline-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  eo-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install the reviewed Linux wheel
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: --index-url https://pypi.org/simple -r tools/eo-validation/requirements-ci.txt
+      - name: Prove runner rejection contracts
+        run: |
+          python -B -W error::ResourceWarning - <<'PY'
+          import gc, sys, unittest
+          errors = []
+          sys.unraisablehook = lambda e: errors.append(type(e.exc_value).__name__)
+          suite = unittest.defaultTestLoader.discover('tools/eo-validation', pattern='test_run_checks.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          gc.collect()
+          if not result.wasSuccessful() or result.testsRun != 12 or result.skipped or errors:
+              raise SystemExit('Incomplete EO runner rejection validation: ' + repr(errors))
+          PY
+      - name: Run pinned offline checks and create a source-bound receipt
+        run: python -B -W error::ResourceWarning tools/eo-validation/run_checks.py --output-dir "$RUNNER_TEMP/eo-validation-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Preserve receipts and logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: eo-offline-research-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/eo-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
