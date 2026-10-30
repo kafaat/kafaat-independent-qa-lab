@@ -1,0 +1,23 @@
+name: Legacy probe circuit regression
+on:
+  pull_request:
+    paths:
+      - 'qa_lab/api.py'
+      - 'qa_lab/legacy_guard.py'
+      - 'tests/test_legacy_guard.py'
+      - '.github/workflows/legacy-probe-guard.yml'
+permissions:
+  contents: read
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m py_compile qa_lab/api.py qa_lab/legacy_guard.py tests/test_legacy_guard.py
+      - run: python -m unittest discover -s tests -p 'test_legacy_guard.py' -v
