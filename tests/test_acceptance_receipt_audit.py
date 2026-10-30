@@ -3,7 +3,7 @@ import unittest
 from qa_lab.http_acceptance import canonical
 from qa_lab.acceptance_receipt_audit import audit_record
 
-SHA = 'a' * 64
+SHA = 'a' * 40
 DEP = 'deploy-example'
 
 def receipt():
