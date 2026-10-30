@@ -3,12 +3,14 @@ import json
 import os
 import hmac
 from .intelligence import classify
+from .legacy_guard import LegacyProbeGuard
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from .core import Lab
 
 class Handler(BaseHTTPRequestHandler):
     lab=None
+    legacy_guard=LegacyProbeGuard()
     def send(self, status, payload):
         data=json.dumps(payload,ensure_ascii=False).encode()
         self.send_response(status)
@@ -26,8 +28,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self.authorized(): return self.send(401,{"error":"unauthorized"})
         if path=="/v1/legacy/capabilities":
             from .legacy_bridge import probe
-            try: return self.send(200,probe("catalog"))
-            except (OSError,ValueError) as exc: return self.send(503,{"error":"legacy_unavailable","detail":str(exc)})
+            try: return self.send(200,self.legacy_guard.call(lambda: probe("catalog")))
+            except (OSError,ValueError,RuntimeError): return self.send(503,{"error":"legacy_unavailable"})
         if path.startswith("/v1/evidence/"):
             rid=path.removeprefix("/v1/evidence/")
             try:
