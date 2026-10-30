@@ -30,12 +30,18 @@ def evaluate(resources):
     """Return deterministic advisory findings, never an approval to execute."""
     if not isinstance(resources, list) or len(resources) > 1000:
         raise ValueError('resources must be a list of at most 1000 entries')
+    if not resources:
+        return {'schema_version': 1, 'status': 'REVIEW_REQUIRED', 'network_checked': False,
+                'license_legality_verified': False, 'execution_approved': False, 'resources': []}
     seen_ids, seen_urls, findings = set(), set(), []
     for position, item in enumerate(resources):
         errors = []
         if not isinstance(item, dict):
             findings.append({'index': position, 'status': 'REJECTED', 'reasons': ['INVALID_ENTRY']})
             continue
+        allowed = {'id', 'url', 'license', 'revision', 'license_reviewed', 'maintenance_reviewed'}
+        if set(item) - allowed:
+            errors.append('UNKNOWN_FIELDS')
         name, url, license_id, revision = (item.get(k) for k in ('id', 'url', 'license', 'revision'))
         if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,79}', name):
             errors.append('INVALID_ID')
