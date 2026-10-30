@@ -27,6 +27,6 @@ jobs:
           suite = unittest.defaultTestLoader.discover('tests', pattern='test_audio_*.py')
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           gc.collect()
-          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 75:
+          if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 76:
               raise SystemExit('Incomplete PCM verification: ' + repr(errors))
           PY

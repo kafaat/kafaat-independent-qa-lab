@@ -54,7 +54,7 @@ it does NOT rerun or newly certify the legacy engine.
 
 ## Validation and remaining scope
 
-The dedicated workflow requires 75 behavioural and archive-consistency tests on
+The dedicated workflow requires 76 behavioural and archive-consistency tests on
 Python 3.12/3.13, with zero skips and zero unraisable resource errors. Local tests
 ran on Python 3.13.5. The published API/worker allowlists and Railway service settings are not changed
 by the new module. Audio profile coverage remains
