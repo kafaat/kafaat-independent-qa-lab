@@ -19,7 +19,7 @@ class ReceiptCostTests(unittest.TestCase):
 
     def test_pending_is_not_billable(self):
         rid = self.submit()
-        with self.assertRaisesRegex(ValueError, 'terminal'):
+        with self.assertRaisesRegex(ValueError, 'receipt'):
             estimate(self.lab, [rid], usd_per_hour='1')
 
     def test_executed_receipt_is_estimated(self):
