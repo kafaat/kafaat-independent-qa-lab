@@ -1,0 +1,23 @@
+name: Acceptance receipt audit
+on:
+  pull_request:
+    paths:
+      - 'qa_lab/acceptance_receipt_audit.py'
+      - 'tests/test_acceptance_receipt_audit.py'
+      - '.github/workflows/acceptance-receipt-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m py_compile qa_lab/acceptance_receipt_audit.py tests/test_acceptance_receipt_audit.py
+      - run: python -m unittest discover -s tests -p 'test_acceptance_receipt_audit.py' -v
