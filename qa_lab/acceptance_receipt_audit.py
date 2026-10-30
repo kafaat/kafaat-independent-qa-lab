@@ -8,7 +8,7 @@ from .http_acceptance import canonical
 _HEX = re.compile(r'[0-9a-f]{64}\Z')
 
 
-_SOURCE = re.compile(r'[0-9a-f]{40}\\Z')
+_SOURCE = re.compile(r'[0-9a-f]{40}\Z')
 
 
 def audit_record(record, expected_sha, expected_deployment):
