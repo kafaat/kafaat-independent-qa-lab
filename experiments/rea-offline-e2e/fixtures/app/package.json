@@ -1,0 +1,7 @@
+{
+  "name": "qa-rea-static-js-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "main": "main.js",
+  "description": "reviewed synthetic static JavaScript analysis sample"
+}
