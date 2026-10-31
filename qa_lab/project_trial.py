@@ -421,6 +421,24 @@ def verify(envelope: object, expected_binding: object, key: bytes, *,
             "source_independently_attested": False}
 
 
+def load_binding(path: str | Path) -> dict:
+    """Never materialize more than the permitted size from an external JSON file."""
+    with Path(path).open("rb") as stream:
+        doc = stream.read(32768 + 1)
+    if len(doc) > 32768:
+        raise TrialRejected("BINDING_FILE_TOO_LARGE")
+    def pairs(items):
+        d = {}
+        for k, v in items:
+            if k in d:
+                raise TrialRejected("DUPLICATE_JSON_KEY")
+            d[k] = v
+        return d
+    return json.loads(doc, object_pairs_hook=pairs,
+                      parse_constant=lambda _: (_ for _ in ()).throw(
+                          TrialRejected("NONFINITE_JSON")))
+
+
 def main() -> int:
     """CLI for reviewed, locally mounted source only; no network or dispatch."""
     import argparse
@@ -439,24 +457,18 @@ def main() -> int:
             raise TrialRejected("PRIVATE_KEY_FILE_REQUIRED")
         if hasattr(os, "getuid") and st.st_uid != os.getuid():
             raise TrialRejected("PRIVATE_KEY_FILE_REQUIRED")
-        key = bytes.fromhex(key_path.read_text(encoding="ascii").strip())
-        doc = Path(args.binding).read_bytes()
-        if len(doc) > 32768:
-            raise TrialRejected("BINDING_FILE_TOO_LARGE")
-        def pairs(items):
-            d = {}
-            for k, v in items:
-                if k in d:
-                    raise TrialRejected("DUPLICATE_JSON_KEY")
-                d[k] = v
-            return d
-        binding = json.loads(doc, object_pairs_hook=pairs,
-                             parse_constant=lambda _: (_ for _ in ()).throw(TrialRejected("NONFINITE_JSON")))
-        receipt = execute(args.repo, binding, args.image, key, timeout=args.timeout)
+        with key_path.open("rb") as stream:
+            key_bytes = stream.read(257)
+        if len(key_bytes) > 256:
+            raise TrialRejected("PRIVATE_KEY_FILE_TOO_LARGE")
+        key = bytes.fromhex(key_bytes.decode("ascii").strip())
+        binding = load_binding(args.binding)
+        # Refuse output inside the measured Git source before any execution.
         dest = Path(args.output).absolute()
         source = Path(args.repo).resolve(strict=True)
         if dest == source or source in dest.parents:
             raise TrialRejected("OUTPUT_WITHIN_SOURCE")
+        receipt = execute(args.repo, binding, args.image, key, timeout=args.timeout)
         encoded = canonical(receipt) + b"\n"
         fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "wb") as f:

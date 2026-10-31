@@ -9,9 +9,10 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import json
 
 from qa_lab.project_trial import (TrialRejected, capture, canonical, docker_argv,
-                                  execute, validate_binding, verify, _read_tracked_nofollow)
+                                  execute, load_binding, validate_binding, verify, _read_tracked_nofollow)
 
 IMAGE = "python:3.12-slim-bookworm@sha256:" + "9" * 64
 
@@ -128,6 +129,46 @@ class SourceTrials(unittest.TestCase):
         for bad in ({**self.b, "grant": "all"}, {**self.b, "criteria_digest": "x" * 64}):
             with self.assertRaises(TrialRejected):
                 validate_binding(bad)
+
+    def test_binding_json_bounded_before_materializing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "huge.json"
+            with path.open("wb") as stream:
+                stream.truncate(10 * 1024 * 1024)
+            with patch("pathlib.Path.read_bytes", side_effect=AssertionError("unbounded read")):
+                with self.assertRaisesRegex(TrialRejected, "BINDING_FILE_TOO_LARGE"):
+                    load_binding(path)
+
+    def test_cli_rejects_output_inside_git_source_before_launch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binding_file = root / "binding.json"
+            binding_file.write_text(json.dumps(self.b))
+            key_file = root / "key.txt"
+            key_file.write_text(self.key.hex())
+            key_file.chmod(0o600)
+            command = [sys.executable, "-m", "qa_lab.project_trial", "--repo", str(self.root),
+                       "--binding", str(binding_file), "--image", IMAGE,
+                       "--key-file", str(key_file), "--output", str(self.root / "bad.json")]
+            run = subprocess.run(command, text=True, capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 2)
+            self.assertEqual(json.loads(run.stdout)["reason"], "OUTPUT_WITHIN_SOURCE")
+            self.assertFalse((self.root / "bad.json").exists())
+
+    def test_cli_refuses_oversized_private_key_before_launch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binding_file = root / "binding.json"
+            binding_file.write_text(json.dumps(self.b))
+            key_file = root / "key.txt"
+            key_file.write_text(self.key.hex() + " " * 300)
+            key_file.chmod(0o600)
+            command = [sys.executable, "-m", "qa_lab.project_trial", "--repo", str(self.root),
+                       "--binding", str(binding_file), "--image", IMAGE,
+                       "--key-file", str(key_file), "--output", str(root / "good.json")]
+            run = subprocess.run(command, text=True, capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 2)
+            self.assertEqual(json.loads(run.stdout)["reason"], "PRIVATE_KEY_FILE_TOO_LARGE")
 
     def test_docker_contract_is_os_restricted(self):
         argv = docker_argv(IMAGE, self.root, "qa-trial-" + "a" * 20)
