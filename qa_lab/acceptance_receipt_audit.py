@@ -43,7 +43,7 @@ def audit_record(record, expected_sha, expected_deployment):
 def read_latest(dsn, expected_sha, expected_deployment):
     """Read only, bounded to five records; never print raw payload or secrets."""
     import psycopg
-    with psycopg.connect(dsn, connect_timeout=5, options='-c statement_timeout=5000 default_transaction_read_only=on') as db:
+    with psycopg.connect(dsn, connect_timeout=5, options='-c statement_timeout=5000 -c default_transaction_read_only=on') as db:
         rows = db.execute('SELECT result FROM qa_acceptance_receipts ORDER BY updated_at DESC LIMIT 5').fetchall()
     for (record,) in rows:
         if isinstance(record, str):
