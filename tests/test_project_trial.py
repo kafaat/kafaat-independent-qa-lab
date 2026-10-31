@@ -3,13 +3,15 @@ import copy
 import hashlib
 import hmac
 import os
+import sys
+from unittest.mock import patch
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
 
 from qa_lab.project_trial import (TrialRejected, capture, canonical, docker_argv,
-                                  validate_binding, verify)
+                                  execute, validate_binding, verify)
 
 IMAGE = "python:3.12-slim-bookworm@sha256:" + "9" * 64
 
@@ -124,6 +126,14 @@ class SourceTrials(unittest.TestCase):
         self.assertFalse(result["hospital_admission"])
         self.assertFalse(result["production_accepted"])
         self.assertFalse(result["source_independently_attested"])
+
+    def test_trusted_fixture_launcher_does_not_shadow_signing_key(self):
+        # This is a subprocess-contract unit test, not a Docker isolation claim.
+        fake = [sys.executable, "-c", "import sys; sys.stderr.write('Ran 2 tests in 0.001s\\n\\nOK\\n')"]
+        with patch("qa_lab.project_trial.docker_argv", return_value=fake):
+            receipt = execute(self.root, self.b, IMAGE, self.key)
+        self.assertEqual(receipt["payload"]["result"], "PASSED")
+        self.assertEqual(self.checked(receipt)["status"], "MATCHED")
 
     def test_tampered_receipt_rejected(self):
         receipt = self.signed()
