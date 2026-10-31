@@ -2,9 +2,11 @@
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 
@@ -51,14 +53,32 @@ def load_policy(policy_name):
 
 
 def gh_error_detail(result):
-    """Retain actionable CLI diagnostics while masking common GitHub token formats."""
-    detail = (result.stderr or result.stdout or "no diagnostic output").strip()
+    """Retain bounded CLI diagnostics without known credentials or header dumps."""
+    detail = next((value.strip() for value in (result.stderr, result.stdout)
+                   if value and value.strip()), "no diagnostic output")
+    # Remove terminal/bidi controls before recognizing credential-bearing lines.
+    detail = "".join(char for char in detail if char in "\n\t" or
+                     unicodedata.category(char) not in {"Cc", "Cf"})
+    for key in ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"):
+        secret = os.environ.get(key)
+        if secret:
+            detail = detail.replace(secret, "[REDACTED TOKEN]")
+    detail = re.sub(
+        r"(?im)^.*\b(?:authorization|proxy-authorization|cookie|set-cookie|"
+        r"x-auth-token|access_token|token|password|credential|secret)[\"']?\s*[:=].*$",
+        "[REDACTED SENSITIVE LINE]", detail,
+    )
     detail = re.sub(
         r"(?i)\b(?:gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,})\b",
         "[REDACTED TOKEN]",
         detail,
     )
     return detail[:4000]
+
+
+def gh_environment():
+    # Debug traces may contain raw request headers; never request them here.
+    return {key: value for key, value in os.environ.items() if key not in {"GH_DEBUG", "DEBUG"}}
 
 
 def run_gh_api(arguments, payload=None):
@@ -68,6 +88,7 @@ def run_gh_api(arguments, payload=None):
         text=True,
         capture_output=True,
         check=False,
+        env=gh_environment(),
     )
     if result.returncode:
         raise RuntimeError(
@@ -83,6 +104,7 @@ def check_gh_auth():
         text=True,
         capture_output=True,
         check=False,
+        env=gh_environment(),
     )
     if result.returncode:
         raise RuntimeError(
@@ -99,9 +121,10 @@ def create_ruleset(policy):
             f"repos/{REPOSITORY}/rulesets?per_page=100&includes_parents=true",
         ]
     )
-    if not isinstance(pages, list) or any(
+    if not isinstance(pages, list) or not pages or any(
         not isinstance(page, list)
-        or any(not isinstance(item, dict) for item in page)
+        or any(not isinstance(item, dict) or not isinstance(item.get("name"), str)
+               or not item["name"].strip() for item in page)
         for page in pages
     ):
         raise RuntimeError(
