@@ -464,7 +464,7 @@ def main() -> int:
         key = bytes.fromhex(key_bytes.decode("ascii").strip())
         binding = load_binding(args.binding)
         # Refuse output inside the measured Git source before any execution.
-        dest = Path(args.output).absolute()
+        dest = Path(args.output).resolve(strict=False)
         source = Path(args.repo).resolve(strict=True)
         if dest == source or source in dest.parents:
             raise TrialRejected("OUTPUT_WITHIN_SOURCE")
