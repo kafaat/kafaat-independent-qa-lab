@@ -190,10 +190,10 @@ def execute(repo: str | Path, binding: dict, image: str, key: bytes,
                     if remaining <= 0:
                         timed_out = True
                         break
-                    for key, _ in poller.select(min(remaining, 0.25)):
-                        chunk = os.read(key.fileobj.fileno(), 65536)
+                    for ready, _ in poller.select(min(remaining, 0.25)):
+                        chunk = os.read(ready.fileobj.fileno(), 65536)
                         if not chunk:
-                            poller.unregister(key.fileobj)
+                            poller.unregister(ready.fileobj)
                         else:
                             total_output += len(chunk)
                             if total_output > 1024 * 1024:
