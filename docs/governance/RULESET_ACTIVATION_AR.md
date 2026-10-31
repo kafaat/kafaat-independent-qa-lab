@@ -10,6 +10,10 @@
 ملف الاستيراد: docs/governance/main-ruleset.json
 والمتابعة: https://github.com/kafaat/kafaat-independent-qa-lab/issues/46
 
+يوجد أيضًا اقتراح مؤقت لفحوص CI فقط، بلا بوابة موافقة بشرية:
+docs/governance/main-ruleset-ci-only.json. لا يُكمل هذا الاقتراح
+متطلبات المراجعة المستقلة.
+
 ## قبل التفعيل
 
 - يجب أن يكون في المستودع مراجع بشري مستقل ذو صلاحية مناسبة،
@@ -23,6 +27,29 @@
   السياسة أي تصريح للنشر الإنتاجي أو إغلاق الحالات.
 
 ## خطوات المستودع في GitHub
+
+يمكن لمسؤول مخوّل استخدام مساعد Python المعتمد على المكتبة القياسية بدل الاستيراد اليدوي.
+يبدأ المساعد دائمًا بوضع DRY RUN، ولا يرسل طلبًا إلى GitHub إلا مع
+`--apply`. يتطلب CLI المصادَق عليه عبر `gh auth login` وصلاحية إدارة
+المستودع. لا تضع رمزًا أو كلمة مرور في وسيطات الأمر أو الملفات.
+
+```sh
+python tools/governance/activate_ruleset.py --policy ci-only
+python tools/governance/activate_ruleset.py --policy ci-only --apply
+```
+
+لا تستخدم سياسة المراجعة الصارمة إلا بعد تأكيد توافر مراجع مستقل مؤهل؛
+المساعد يرفض تطبيقها دون إقرار صريح:
+
+```sh
+python tools/governance/activate_ruleset.py --policy independent-review
+python tools/governance/activate_ruleset.py --policy independent-review --reviewer-ready --apply
+```
+
+المساعد ينشئ قاعدة ولا يثبت وحده أن إعدادات GitHub الفعلية تطابقها.
+افحص الحالة والـeffective branch rules يدويًا بعد الإنشاء. إذا ظهرت قاعدة
+بالاسم نفسه، يتوقف المساعد بدل إنشاء نسخة مكررة؛ افحص القاعدة الحالية
+وتعامل معها من إعدادات GitHub.
 
 1. افتح https://github.com/kafaat/kafaat-independent-qa-lab/settings/rules
    بحساب يملك إدارة إعدادات المستودع.
