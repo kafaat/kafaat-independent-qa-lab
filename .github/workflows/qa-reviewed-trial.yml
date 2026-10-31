@@ -1,0 +1,69 @@
+name: QA reviewed project trial
+on:
+  pull_request:
+    paths:
+      - 'qa_lab/project_trial.py'
+      - 'tests/test_project_trial.py'
+      - '.github/workflows/qa-reviewed-trial.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p 'test_project_trial.py' -v
+  docker-fixture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Run real reviewed-source fixture inside Docker
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, subprocess, tempfile
+          from qa_lab.project_trial import capture, execute, verify
+          with tempfile.TemporaryDirectory() as tmp:
+              root = pathlib.Path(tmp)/'src'
+              root.mkdir()
+              subprocess.run(['git','-C',str(root),'init','-q'],check=True)
+              subprocess.run(['git','-C',str(root),'config','user.email','ci@invalid.example'],check=True)
+              subprocess.run(['git','-C',str(root),'config','user.name','CI Fixture'],check=True)
+              (root/'tests').mkdir()
+              (root/'tests'/'test_calculation.py').write_text(
+                  'import unittest\nclass T(unittest.TestCase):\n'
+                  '    def test_a(self): self.assertEqual(4, 2+2)\n'
+                  '    def test_b(self): self.assertTrue(True)\n')
+              subprocess.run(['git','-C',str(root),'add','tests/test_calculation.py'],check=True)
+              subprocess.run(['git','-C',str(root),'commit','-qm','reviewed fixture'],check=True)
+              sha = subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip()
+              binding = {'tenant_id':'ci','project_id':'fixture','case_id':'trial','cycle_no':1,
+                         'snapshot_id':'fixture-s1','attempt_no':1,'criteria_digest':'c'*64,'source_sha':sha}
+              subprocess.run(['docker','pull','python:3.12-slim-bookworm'],check=True,
+                             stdout=subprocess.DEVNULL)
+              image = subprocess.check_output(['docker','image','inspect','--format',
+                  '{{index .RepoDigests 0}}','python:3.12-slim-bookworm'],text=True).strip()
+              manifest,_ = capture(root,sha)
+              key = os.urandom(32)
+              envelope=execute(root,binding,image,key,timeout=75)
+              result=verify(envelope,binding,key,expected_manifest_sha256=manifest['manifest_sha256'],
+                            expected_image=image,minimum_tests=2)
+              assert envelope['payload']['result']=='PASSED',envelope['payload']['result']
+              assert result['status']=='MATCHED'
+              assert result['hospital_admission'] is False
+              print(json.dumps({'status':'PASSED','tests_observed':envelope['payload']['tests_observed'],
+                  'source_sha':sha,'manifest_sha256':manifest['manifest_sha256'],
+                  'source_attested_independently':False,'production_accepted':False}))
+          PY
