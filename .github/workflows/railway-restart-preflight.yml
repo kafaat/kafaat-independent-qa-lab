@@ -1,0 +1,25 @@
+name: Railway offline restart evidence (review only)
+on:
+  pull_request:
+    paths:
+      - 'qa_lab/railway_restart_preflight.py'
+      - 'tests/test_railway_restart_preflight.py'
+      - '.github/workflows/railway-restart-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  fail-closed-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p 'test_railway_restart_preflight.py' -v
