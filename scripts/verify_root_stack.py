@@ -36,6 +36,18 @@ def receipt_digest(receipt):
                                     separators=(',', ':')).encode()).hexdigest()
 
 
+def published_port(compose):
+    """Ask Docker each time: an ephemeral host binding can change on restart."""
+    value = compose('port', 'api', '8765')
+    try:
+        host, port = value.rsplit(':', 1)
+        if host != '127.0.0.1' or not port.isascii() or not port.isdecimal() or not 1 <= int(port) <= 65535:
+            raise ValueError('invalid binding')
+        return int(port)
+    except (ValueError, AttributeError):
+        raise RuntimeError('expected exactly one localhost TCP binding') from None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
@@ -100,10 +112,9 @@ def main():
         started = True
         compose('up', '-d', '--build', '--wait', '--wait-timeout', '120', timeout=600)
         checks['fresh_volume_stack_started'] = True
-        address = compose('port', 'api', '8765')
-        host, raw_port = address.rsplit(':', 1)
-        require('api_published_on_loopback_only', host == '127.0.0.1' and raw_port.isdecimal())
-        port = int(raw_port)
+        port = published_port(compose)
+        require('api_published_on_loopback_only', True)
+        proof['published_ports'] = [port]
 
         def request(path, payload=None, credential=token):
             connection = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
@@ -196,6 +207,9 @@ print(json.dumps(flags))
         require('exactly_two_runs_no_duplicate_effect', compose('exec', '-T', 'evidence', 'python', '-c', count_script) == '2')
         stage = 'restart'
         compose('restart', *SERVICES)
+        port = published_port(compose)
+        proof['published_ports'].append(port)
+        require('api_republished_on_loopback_after_restart', True)
         for _ in range(60):
             try:
                 if request('/healthz')[0] == 200:
@@ -203,6 +217,8 @@ print(json.dumps(flags))
             except (OSError, http.client.HTTPException):
                 pass
             time.sleep(1)
+        else:
+            raise RuntimeError('api_restart_readiness_timeout')
         code, restored = request('/v1/runs/' + rid)
         require('receipt_persisted_after_restart', code == 200 and restored == result)
         for service, service_port in (('evidence', 8766), ('triage', 8767)):

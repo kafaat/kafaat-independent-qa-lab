@@ -77,5 +77,22 @@ class RootStackContractTests(unittest.TestCase):
         self.assertIn('  qa-internal:\n    internal: true', source)
 
 
+    def test_port_lookup_is_refreshed_after_restart(self):
+        values = iter(('127.0.0.1:30101', '127.0.0.1:30202'))
+        calls = []
+        def compose(*args):
+            calls.append(args)
+            return next(values)
+        self.assertEqual(probe.published_port(compose), 30101)
+        self.assertEqual(probe.published_port(compose), 30202)
+        self.assertEqual(calls, [('port', 'api', '8765')] * 2)
+
+    def test_port_lookup_refuses_nonlocal_or_ambiguous_binding(self):
+        for invalid in ('', '0.0.0.0:8765', '127.0.0.1:0', '127.0.0.1:65536',
+                        '127.0.0.1:abc', '127.0.0.1:123\n127.0.0.1:124', '[::]:8765'):
+            with self.subTest(binding=invalid), self.assertRaises(RuntimeError):
+                probe.published_port(lambda *args: invalid)
+
+
 if __name__ == '__main__':
     unittest.main()
