@@ -21,11 +21,16 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers();self.wfile.write(data)
     def authorized(self):
         token=os.environ.get("QA_API_TOKEN","")
-        return bool(token) and hmac.compare_digest(self.headers.get("Authorization",""),"Bearer "+token)
+        values=self.headers.get_all("Authorization",[])
+        return bool(token) and len(values)==1 and hmac.compare_digest(values[0],"Bearer "+token)
     def do_GET(self):
         path=urlsplit(self.path).path
         if path=="/healthz": return self.send(200,{"status":"ok"})
         if not self.authorized(): return self.send(401,{"error":"unauthorized"})
+        if path=="/v1/runs":
+            from .run_catalog import filters, list_runs
+            try: return self.send(200,list_runs(self.lab,filters(urlsplit(self.path).query)))
+            except (ValueError,TypeError): return self.send(400,{"error":"invalid_filter"})
         if path=="/v1/legacy/capabilities":
             from .legacy_bridge import probe
             try: return self.send(200,self.legacy_guard.call(lambda: probe("catalog")))

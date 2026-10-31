@@ -84,6 +84,28 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+  operator-ui:
+    <<: *runtime
+    profiles: ["operator-ui"]
+    command: ["python", "-m", "qa_lab.console", "serve"]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      QA_API_TOKEN: "${QA_API_TOKEN:?Set QA_API_TOKEN}"
+      QA_UI_PASSWORD_HASH: "${QA_UI_PASSWORD_HASH:-}"
+      QA_UI_API_BASE: "http://api:8765"
+      QA_BIND_HOST: "0.0.0.0"
+      PORT: "8780"
+    ports:
+      - "127.0.0.1:${QA_UI_PORT:-8780}:8780"
+    networks: [qa-edge]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8780/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
 networks:
   qa-edge: {}
   qa-internal:

@@ -1,0 +1,15 @@
+:root{font-family:system-ui,"Segoe UI",Tahoma,sans-serif;color-scheme:light;line-height:1.55;background:#f5f7fa;color:#182437}
+*{box-sizing:border-box}body{margin:0}header{background:#102b46;color:#fff;padding:1rem max(1rem,calc((100vw - 1100px)/2));display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.brand{font-weight:700;font-size:1.2rem}.brand small{display:block;font-weight:400;font-size:.8rem;color:#d3e0ed}
+nav{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}nav a{color:#fff}nav form{margin:0}
+main{max-width:1100px;margin:0 auto;padding:1.5rem 1rem 3rem}h1{font-size:1.7rem;margin-top:.4rem}
+a{color:#06569c}button{cursor:pointer;background:#0863ad;color:#fff;border:0;border-radius:.4rem;padding:.6rem 1rem;font:inherit}
+nav button{background:#314c65}button:hover{filter:brightness(.91)}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #df9a16;outline-offset:2px}
+.panel,.filters{max-width:690px;background:#fff;padding:1.25rem;border:1px solid #d2dbe5;border-radius:.7rem;display:grid;gap:1rem}
+label{display:grid;gap:.3rem;font-weight:600}input,select{font:inherit;min-height:2.6rem;padding:.45rem .65rem;border:1px solid #8495a6;border-radius:.35rem;width:100%;min-width:0}
+.filters{max-width:none;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end;margin-bottom:1rem}.filters button{min-height:2.6rem}
+.table-scroll{overflow:auto;background:#fff;border:1px solid #d2dbe5;border-radius:.55rem}table{border-collapse:collapse;width:100%;min-width:680px}th,td{padding:.75rem;text-align:start;border-bottom:1px solid #e0e5ec;overflow-wrap:anywhere}th{background:#e8f0f7}
+dl{background:#fff;border:1px solid #d2dbe5;padding:1rem;border-radius:.6rem;display:grid;grid-template-columns:11rem 1fr;gap:.6rem}dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
+pre{background:#172b3c;color:#eef5ff;border-radius:.5rem;padding:1rem;overflow:auto;max-height:50vh;direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere}
+.boundary{margin-top:2rem;border-top:1px solid #cad5df;padding-top:1rem;color:#46586a}.error{color:#a01828;font-weight:700}
+@media(max-width:720px){.filters{grid-template-columns:1fr}dl{grid-template-columns:1fr}header{align-items:flex-start}nav{width:100%}h1{font-size:1.4rem}}
