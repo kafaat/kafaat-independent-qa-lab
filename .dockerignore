@@ -1,0 +1,16 @@
+# Keep root and existing explicit Dockerfiles usable, without copying local data.
+.git
+.env
+.env.*
+!.env.example
+.local
+.qa-lab-data
+workspace
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+**/.venv
+*.zip
+*.log
+*.sqlite3
+*.sqlite3-*
