@@ -155,6 +155,25 @@ class SourceTrials(unittest.TestCase):
             self.assertEqual(json.loads(run.stdout)["reason"], "OUTPUT_WITHIN_SOURCE")
             self.assertFalse((self.root / "bad.json").exists())
 
+    def test_cli_rejects_symlink_alias_to_git_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            alias = root / "source-alias"
+            alias.symlink_to(self.root, target_is_directory=True)
+            binding_file = root / "binding.json"
+            binding_file.write_text(json.dumps(self.b))
+            key_file = root / "key.txt"
+            key_file.write_text(self.key.hex())
+            key_file.chmod(0o600)
+            output = alias / "receipt.json"
+            command = [sys.executable, "-m", "qa_lab.project_trial", "--repo", str(self.root),
+                       "--binding", str(binding_file), "--image", IMAGE,
+                       "--key-file", str(key_file), "--output", str(output)]
+            run = subprocess.run(command, text=True, capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 2)
+            self.assertEqual(json.loads(run.stdout)["reason"], "OUTPUT_WITHIN_SOURCE")
+            self.assertFalse((self.root / "receipt.json").exists())
+
     def test_cli_refuses_oversized_private_key_before_launch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
