@@ -157,6 +157,26 @@ class SourceTrials(unittest.TestCase):
         self.assertEqual(receipt["payload"]["result"], "PASSED")
         self.assertEqual(self.checked(receipt)["status"], "MATCHED")
 
+    def test_signed_privileged_or_extra_fields_rejected(self):
+        for name, value in (("close_case", True), ("grant", "owner"), ("cmd", "sh")):
+            with self.subTest(name=name):
+                receipt = self.signed()
+                receipt["payload"][name] = value
+                receipt["signature"]["value"] = hmac.new(
+                    self.key, canonical(receipt["payload"]), hashlib.sha256).hexdigest()
+                self.assertIn("UNEXPECTED_RECEIPT_FIELDS", self.checked(receipt)["reasons"])
+
+    def test_unittest_fabricated_duplicate_summary_rejected(self):
+        # A malicious test module could print a fabricated summary before
+        # the actual unittest summary. Neither may be trusted as a count.
+        fake = [sys.executable, "-c", "import sys; sys.stderr.write("
+                "'Ran 10 tests in 0.001s\\n\\nOK\\n' + "
+                "'Ran 2 tests in 0.001s\\n\\nOK\\n')"]
+        with patch("qa_lab.project_trial.docker_argv", return_value=fake):
+            receipt = execute(self.root, self.b, IMAGE, self.key)
+        self.assertEqual(receipt["payload"]["result"], "FAILED")
+        self.assertEqual(receipt["payload"]["tests_observed"], 0)
+
     def test_tampered_receipt_rejected(self):
         receipt = self.signed()
         receipt["payload"]["tests_observed"] = 100
