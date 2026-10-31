@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ POLICIES = {
     "independent-review": ROOT / "docs" / "governance" / "main-ruleset.json",
 }
 REPOSITORY = "kafaat/kafaat-independent-qa-lab"
+GITHUB_HOST = "github.com"
 
 
 def parse_args(argv=None):
@@ -48,9 +50,20 @@ def load_policy(policy_name):
     return policy
 
 
+def gh_error_detail(result):
+    """Retain actionable CLI diagnostics while masking common GitHub token formats."""
+    detail = (result.stderr or result.stdout or "no diagnostic output").strip()
+    detail = re.sub(
+        r"(?i)\b(?:gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,})\b",
+        "[REDACTED TOKEN]",
+        detail,
+    )
+    return detail[:4000]
+
+
 def run_gh_api(arguments, payload=None):
     result = subprocess.run(
-        ["gh", "api", *arguments],
+        ["gh", "api", "--hostname", GITHUB_HOST, *arguments],
         input=payload,
         text=True,
         capture_output=True,
@@ -58,30 +71,43 @@ def run_gh_api(arguments, payload=None):
     )
     if result.returncode:
         raise RuntimeError(
-            "GitHub CLI request failed; check `gh auth status` and repository admin access."
+            f"GitHub CLI API request failed (exit {result.returncode}): "
+            f"{gh_error_detail(result)}"
         )
     return json.loads(result.stdout) if result.stdout.strip() else {}
 
 
 def check_gh_auth():
     result = subprocess.run(
-        ["gh", "auth", "status", "--hostname", "github.com"],
+        ["gh", "auth", "status", "--hostname", GITHUB_HOST],
         text=True,
         capture_output=True,
         check=False,
     )
     if result.returncode:
         raise RuntimeError(
-            "GitHub CLI authentication check failed; run `gh auth status`."
+            f"GitHub CLI authentication check failed (exit {result.returncode}): "
+            f"{gh_error_detail(result)}"
         )
 
 
 def create_ruleset(policy):
     check_gh_auth()
-    existing = run_gh_api(
-        [f"repos/{REPOSITORY}/rulesets?per_page=100"]
+    pages = run_gh_api(
+        [
+            "--paginate", "--slurp",
+            f"repos/{REPOSITORY}/rulesets?per_page=100&includes_parents=true",
+        ]
     )
-    if any(item.get("name") == policy["name"] for item in existing):
+    if not isinstance(pages, list) or any(
+        not isinstance(page, list)
+        or any(not isinstance(item, dict) for item in page)
+        for page in pages
+    ):
+        raise RuntimeError(
+            "Unexpected paginated ruleset response; refusing to create a rule."
+        )
+    if any(item.get("name") == policy["name"] for page in pages for item in page):
         raise RuntimeError(
             f"A ruleset named {policy['name']!r} already exists; inspect it in GitHub Settings."
         )

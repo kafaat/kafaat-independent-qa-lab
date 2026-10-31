@@ -1,6 +1,8 @@
 import contextlib
 import io
 import json
+import os
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -44,7 +46,7 @@ class RulesetActivationTests(unittest.TestCase):
         with patch.object(
             activate_ruleset,
             "run_gh_api",
-            side_effect=[[], {"id": 42}],
+            side_effect=[[[]], {"id": 42}],
         ) as api, patch.object(activate_ruleset, "check_gh_auth") as auth_check:
             result = activate_ruleset.main(["--policy", "ci-only", "--apply"])
 
@@ -52,7 +54,10 @@ class RulesetActivationTests(unittest.TestCase):
         auth_check.assert_called_once_with()
         self.assertEqual(api.call_count, 2)
         api.assert_any_call(
-            ["repos/kafaat/kafaat-independent-qa-lab/rulesets?per_page=100"]
+            [
+                "--paginate", "--slurp",
+                "repos/kafaat/kafaat-independent-qa-lab/rulesets?per_page=100&includes_parents=true",
+            ]
         )
         api.assert_called_with(
             [
@@ -68,14 +73,17 @@ class RulesetActivationTests(unittest.TestCase):
         with patch.object(
             activate_ruleset,
             "run_gh_api",
-            return_value=[{"name": policy["name"]}],
+            return_value=[[{"name": policy["name"]}]],
         ) as api, patch.object(activate_ruleset, "check_gh_auth") as auth_check:
             with self.assertRaisesRegex(RuntimeError, "already exists"):
                 activate_ruleset.create_ruleset(policy)
 
         auth_check.assert_called_once_with()
         api.assert_called_once_with(
-            ["repos/kafaat/kafaat-independent-qa-lab/rulesets?per_page=100"]
+            [
+                "--paginate", "--slurp",
+                "repos/kafaat/kafaat-independent-qa-lab/rulesets?per_page=100&includes_parents=true",
+            ]
         )
 
     def test_full_policy_requires_at_least_one_approval(self):
@@ -86,6 +94,112 @@ class RulesetActivationTests(unittest.TestCase):
         self.assertGreaterEqual(
             review_rule["parameters"]["required_approving_review_count"], 1
         )
+
+
+    def test_api_pins_github_host_even_with_enterprise_environment(self):
+        response = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="{}", stderr=""
+        )
+        with patch.dict(os.environ, {"GH_HOST": "enterprise.example.invalid"}):
+            with patch.object(
+                activate_ruleset.subprocess, "run", return_value=response
+            ) as command:
+                self.assertEqual(
+                    activate_ruleset.run_gh_api(["repos/test/repo/rulesets"]),
+                    {},
+                )
+        self.assertEqual(
+            command.call_args.args[0][:4],
+            ["gh", "api", "--hostname", "github.com"],
+        )
+
+    def test_authentication_uses_same_explicit_github_host(self):
+        response = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+        with patch.object(
+            activate_ruleset.subprocess, "run", return_value=response
+        ) as command:
+            activate_ruleset.check_gh_auth()
+        self.assertEqual(
+            command.call_args.args[0],
+            ["gh", "auth", "status", "--hostname", "github.com"],
+        )
+
+    def test_cli_validation_error_is_actionable_and_redacts_tokens(self):
+        response = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="",
+            stderr="gh: HTTP 422 Validation Failed; github_pat_TESTSECRETVALUE123456",
+        )
+        with patch.object(
+            activate_ruleset.subprocess, "run", return_value=response
+        ):
+            with self.assertRaises(RuntimeError) as failure:
+                activate_ruleset.run_gh_api(["repos/test/repo/rulesets"])
+        message = str(failure.exception)
+        self.assertIn("422 Validation Failed", message)
+        self.assertIn("exit 1", message)
+        self.assertNotIn("github_pat_TESTSECRETVALUE123456", message)
+        self.assertIn("[REDACTED TOKEN]", message)
+
+    def test_cli_error_uses_stdout_when_stderr_is_empty(self):
+        response = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="HTTP 403: Resource not accessible",
+            stderr="",
+        )
+        with patch.object(
+            activate_ruleset.subprocess, "run", return_value=response
+        ):
+            with self.assertRaisesRegex(RuntimeError, "HTTP 403"):
+                activate_ruleset.run_gh_api(["repos/test/repo/rulesets"])
+
+    def test_authentication_failure_retains_diagnostic(self):
+        response = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="",
+            stderr="gh: no token configured for github.com",
+        )
+        with patch.object(
+            activate_ruleset.subprocess, "run", return_value=response
+        ):
+            with self.assertRaisesRegex(RuntimeError, "no token configured"):
+                activate_ruleset.check_gh_auth()
+
+    def test_duplicate_on_later_page_fails_closed_without_post(self):
+        policy = activate_ruleset.load_policy("ci-only")
+        first_page = [{"name": f"unrelated-{i}"} for i in range(100)]
+        next_page = [{"name": policy["name"]}]
+        with patch.object(
+            activate_ruleset, "run_gh_api",
+            return_value=[first_page, next_page],
+        ) as api, patch.object(activate_ruleset, "check_gh_auth"):
+            with self.assertRaisesRegex(RuntimeError, "already exists"):
+                activate_ruleset.create_ruleset(policy)
+        api.assert_called_once_with(
+            [
+                "--paginate", "--slurp",
+                "repos/kafaat/kafaat-independent-qa-lab/rulesets?per_page=100&includes_parents=true",
+            ]
+        )
+
+    def test_invalid_pagination_response_never_creates_ruleset(self):
+        policy = activate_ruleset.load_policy("ci-only")
+        with patch.object(
+            activate_ruleset, "run_gh_api", return_value=[{"name": "bad shape"}]
+        ) as api, patch.object(activate_ruleset, "check_gh_auth"):
+            with self.assertRaisesRegex(RuntimeError, "Unexpected paginated"):
+                activate_ruleset.create_ruleset(policy)
+        api.assert_called_once()
+
+    def test_full_policy_remains_dry_run_without_reviewer_or_apply(self):
+        with patch.object(activate_ruleset, "check_gh_auth") as auth:
+            with patch.object(activate_ruleset, "run_gh_api") as api:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    result = activate_ruleset.main(
+                        ["--policy", "independent-review"]
+                    )
+        self.assertEqual(result, 0)
+        auth.assert_not_called()
+        api.assert_not_called()
 
 
 if __name__ == "__main__":
