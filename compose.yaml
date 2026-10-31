@@ -1,50 +1,89 @@
+x-runtime: &runtime
+  build: .
+  user: "10001:10001"
+  read_only: true
+  tmpfs: ["/tmp"]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+
 services:
+  initialize:
+    <<: *runtime
+    command: ["python", "-c", "from qa_lab.core import Lab; Lab('/data')"]
+    network_mode: none
+    volumes:
+      - qa-data:/data
+    restart: "no"
   api:
-    build: .
+    <<: *runtime
     command: ["python", "-m", "qa_lab", "--data-dir", "/data", "serve"]
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
     environment:
       QA_API_TOKEN: "${QA_API_TOKEN:?Set QA_API_TOKEN}"
       QA_BIND_HOST: "0.0.0.0"
     ports:
-      - "127.0.0.1:8765:8765"
+      - "127.0.0.1:${QA_API_PORT:-8765}:8765"
     volumes:
       - qa-data:/data
     networks: [qa-internal]
-    security_opt: ["no-new-privileges:true"]
-    cap_drop: ["ALL"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
   worker:
-    build: .
+    <<: *runtime
     command: ["python", "-m", "qa_lab.worker", "--data-dir", "/data", "--workspace", "/workspace"]
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
     environment:
       QA_REQUIRE_GIT_SHA: "1"
     volumes:
       - qa-data:/data
-      - ./workspace:/workspace:ro
+      - type: bind
+        source: "${QA_WORKSPACE_PATH:-./workspace}"
+        target: /workspace
+        read_only: true
+        bind:
+          create_host_path: false
     networks: [qa-internal]
-    security_opt: ["no-new-privileges:true"]
-    cap_drop: ["ALL"]
   evidence:
-    build: .
+    <<: *runtime
     command: ["python", "-m", "qa_lab.evidence_service"]
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
     environment:
       QA_API_TOKEN: "${QA_API_TOKEN:?Set QA_API_TOKEN}"
       QA_DATA_DIR: /data
     volumes:
       - qa-data:/data:ro
     networks: [qa-internal]
-    security_opt: ["no-new-privileges:true"]
-    cap_drop: ["ALL"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8766/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
   triage:
-    build: .
+    <<: *runtime
     command: ["python", "-m", "qa_lab.triage_service"]
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
     environment:
       QA_API_TOKEN: "${QA_API_TOKEN:?Set QA_API_TOKEN}"
       QA_DATA_DIR: /data
     volumes:
       - qa-data:/data:ro
     networks: [qa-internal]
-    security_opt: ["no-new-privileges:true"]
-    cap_drop: ["ALL"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8767/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 networks:
   qa-internal:
     internal: true

@@ -1,0 +1,69 @@
+"""Preflight/contract checks, not substitutes for a successful Docker build."""
+import importlib.util
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location('root_stack_probe', ROOT / 'scripts/verify_root_stack.py')
+probe = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(probe)
+
+
+class RootStackContractTests(unittest.TestCase):
+    def test_opt_in_required_before_docker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'receipt.json'
+            env = dict(os.environ); env.pop('QA_ROOT_STACK_OPT_IN', None)
+            result = subprocess.run([sys.executable, str(ROOT / 'scripts/verify_root_stack.py'),
+                                     '--output', str(path)], env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('QA_ROOT_STACK_OPT_IN', result.stderr)
+            self.assertFalse(path.exists())
+
+    def test_source_output_rejected_before_docker(self):
+        path = ROOT / 'never-create-receipt.json'
+        result = subprocess.run([sys.executable, str(ROOT / 'scripts/verify_root_stack.py'),
+                                 '--output', str(path)], capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('outside the source', result.stderr)
+        self.assertFalse(path.exists())
+
+    def test_remote_docker_refused_before_use(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ('DOCKER_HOST', 'DOCKER_CONTEXT'):
+                env = dict(os.environ, QA_ROOT_STACK_OPT_IN='isolated-ci')
+                env[name] = 'never-contact-this'
+                result = subprocess.run([sys.executable, str(ROOT / 'scripts/verify_root_stack.py'),
+                                         '--output', str(Path(tmp) / 'receipt.json')],
+                                        env=env, capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('Docker contexts', result.stderr)
+
+    def test_receipt_digest_ignores_only_its_own_digest(self):
+        value = {'status': 'PASSED', 'source_sha': 'a' * 40}
+        initial = probe.receipt_digest(value)
+        self.assertEqual(initial, probe.receipt_digest({**value, 'sha256': 'wrong'}))
+        self.assertNotEqual(initial, probe.receipt_digest({**value, 'status': 'FAILED'}))
+
+    def test_default_dockerfile_is_nonroot_and_copies_only_package(self):
+        source = (ROOT / 'Dockerfile').read_text()
+        self.assertIn('USER 10001:10001', source)
+        self.assertIn('git config --system --add safe.directory /workspace', source)
+        copies = [line for line in source.splitlines() if line.startswith('COPY ')]
+        self.assertEqual(copies, ['COPY qa_lab /app/qa_lab'])
+
+    def test_compose_keeps_reader_mounts_and_loopback(self):
+        source = (ROOT / 'compose.yaml').read_text()
+        self.assertEqual(source.count('condition: service_completed_successfully'), 4)
+        self.assertEqual(source.count('- qa-data:/data:ro'), 2)
+        self.assertIn('127.0.0.1:${QA_API_PORT:-8765}:8765', source)
+        self.assertIn('create_host_path: false', source)
+        self.assertIn('QA_REQUIRE_GIT_SHA: "1"', source)
+
+
+if __name__ == '__main__':
+    unittest.main()
