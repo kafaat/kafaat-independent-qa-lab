@@ -127,7 +127,8 @@ class LabAPI:
     """Server-side only; never serialize the bearer token in responses."""
     def __init__(self, base_url, token):
         parts = urlsplit(base_url)
-        if (parts.scheme != "http" or not parts.hostname or not parts.port
+        if (parts.scheme != "http" or parts.hostname not in
+                ("api", "127.0.0.1", "localhost", "::1") or not parts.port
                 or parts.username or parts.password or parts.path not in ("", "/")
                 or parts.query or parts.fragment or not token):
             raise ValueError("invalid internal API configuration")
@@ -255,13 +256,14 @@ class Console(BaseHTTPRequestHandler):
 
     def validate_host(self):
         hosts = self.headers.get_all("Host", [])
-        if len(hosts) != 1:
+        if len(hosts) != 1 or len(hosts[0]) > 253:
             return False
-        try:
-            host = urlsplit("http://" + hosts[0]).hostname
-        except ValueError:
-            return False
-        return host in ("127.0.0.1", "localhost", "::1")
+        # Validate the complete authority, not just urlsplit().hostname:
+        # an attacker can otherwise smuggle userinfo (evil@localhost).
+        match = re.fullmatch(r"(?:localhost|127\.0\.0\.1|\[::1\])(?::([0-9]{1,5}))?",
+                             hosts[0], re.IGNORECASE)
+        return match is not None and (
+            match.group(1) is None or 1 <= int(match.group(1)) <= 65535)
 
     def form(self):
         if self.headers.get("Transfer-Encoding") or self.headers.get("Content-Type") != "application/x-www-form-urlencoded":

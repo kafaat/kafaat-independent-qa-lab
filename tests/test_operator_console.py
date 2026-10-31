@@ -178,6 +178,46 @@ class ConsoleHTTPTests(unittest.TestCase):
 
 
 
+class HostAndBackendBoundaryTests(unittest.TestCase):
+    def test_backend_bearer_target_must_be_local_or_internal_service(self):
+        for allowed in ("http://api:8765", "http://localhost:8765",
+                        "http://127.0.0.1:8765", "http://[::1]:8765"):
+            with self.subTest(allowed=allowed):
+                self.assertIsInstance(LabAPI(allowed, API_TOKEN), LabAPI)
+        for denied in ("http://evil.example:8765", "http://api.evil.example:8765",
+                       "http://user@localhost:8765", "https://localhost:8765",
+                       "http://localhost:8765/prefix", "http://127.0.0.2:8765"):
+            with self.subTest(denied=denied), self.assertRaises(ValueError):
+                LabAPI(denied, API_TOKEN)
+
+    def test_complete_host_authority_cannot_include_userinfo(self):
+        handler = type("HostOnly", (Console,), {"api": FakeAPI(),
+                       "sessions": SessionStore(),
+                       "password_hash_value": password_hash(PASSWORD, salt=b"0123456789abcdef"),
+                       "log_message": lambda *args: None})
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            for authority in ("evil@localhost", "evil@127.0.0.1",
+                              "localhost@localhost", "localhost/path",
+                              "localhost:65536", "127.0.0.1:0",
+                              "localhost.example.com", "[::1]@localhost"):
+                with self.subTest(authority=authority):
+                    conn = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+                    try:
+                        conn.request("GET", "/login", headers={"Host": authority})
+                        response = conn.getresponse()
+                        self.assertEqual(response.status, 400)
+                        response.read()
+                    finally:
+                        conn.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(5)
+
+
 class RedirectSafetyTests(unittest.TestCase):
     def test_authorization_never_follows_backend_redirect(self):
         received = []

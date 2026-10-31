@@ -28,3 +28,12 @@ submission, run detail, and receipt hash verification. The browser never receive
 the administrative API bearer token. See [operator console setup and security
 boundaries](docs/OPERATOR_CONSOLE_AR.md). This is NOT multi-user project RBAC or
 a public deployment. The default Compose startup remains unchanged.
+
+## Operator UI container acceptance
+
+A dedicated isolated, opt-in Docker Compose acceptance checks the actual
+localhost operator-ui container, real browser submission -> API -> SQLite
+worker -> receipt, secret boundaries, logout and restart, and cleanup.
+See [operator acceptance](docs/OPERATOR_COMPOSE_ACCEPTANCE_AR.md) and
+[reviewed security boundaries](docs/OPERATOR_SECURITY_REVIEW.md).
+This proves neither project RBAC nor public deployment readiness.
