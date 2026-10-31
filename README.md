@@ -37,3 +37,13 @@ worker -> receipt, secret boundaries, logout and restart, and cleanup.
 See [operator acceptance](docs/OPERATOR_COMPOSE_ACCEPTANCE_AR.md) and
 [reviewed security boundaries](docs/OPERATOR_SECURITY_REVIEW.md).
 This proves neither project RBAC nor public deployment readiness.
+
+## Branch protection and independent review
+
+The importable **proposal** for `main` branch protection lives in
+[docs/governance/main-ruleset.json](docs/governance/main-ruleset.json), with
+[activation guidance](docs/governance/RULESET_ACTIVATION_AR.md) and an
+[independent human review handoff](docs/governance/INDEPENDENT_REVIEW_HANDOFF_AR.md).
+Committing these files does **not** activate GitHub Rulesets or constitute an
+independent approval. Governance completion remains tracked in
+[issue #46](https://github.com/kafaat/kafaat-independent-qa-lab/issues/46).
