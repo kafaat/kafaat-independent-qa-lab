@@ -69,6 +69,75 @@ def _git(repo: Path, *args: str) -> bytes:
     return p.stdout
 
 
+def _read_tracked_nofollow(root: Path, name: str, available: int) -> bytes:
+    """Open every path component without following links and cap bytes before reading.
+
+    A second stat check detects concurrent mutation; the caller additionally
+    compares actual bytes against Git's committed object ID.
+    """
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+        raise TrialRejected("SAFE_FILE_OPEN_UNAVAILABLE")
+    flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    parts = name.split("/")
+    directory = None
+    leaf = None
+    try:
+        directory = os.open(root, flags | os.O_DIRECTORY)
+        for part in parts[:-1]:
+            next_directory = os.open(part, flags | os.O_DIRECTORY, dir_fd=directory)
+            os.close(directory)
+            directory = next_directory
+        leaf = os.open(parts[-1], flags | getattr(os, "O_NONBLOCK", 0), dir_fd=directory)
+        initial = os.fstat(leaf)
+        if not stat.S_ISREG(initial.st_mode):
+            raise TrialRejected("UNSAFE_TRACKED_ENTRY")
+        if initial.st_size > available:
+            raise TrialRejected("SOURCE_LIMIT")
+        chunks = []
+        total = 0
+        while total <= available:
+            chunk = os.read(leaf, min(65536, available + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        if total > available:
+            raise TrialRejected("SOURCE_LIMIT")
+        final = os.fstat(leaf)
+        if (total != initial.st_size or initial.st_ino != final.st_ino
+                or initial.st_dev != final.st_dev or initial.st_mtime_ns != final.st_mtime_ns
+                or initial.st_ctime_ns != final.st_ctime_ns or initial.st_size != final.st_size):
+            raise TrialRejected("TRACKED_FILE_CHANGED")
+        return b"".join(chunks)
+    except OSError as exc:
+        raise TrialRejected("UNSAFE_TRACKED_ENTRY") from exc
+    finally:
+        if leaf is not None:
+            os.close(leaf)
+        if directory is not None:
+            os.close(directory)
+
+
+def _committed_tree(root: Path) -> dict[bytes, tuple[bytes, bytes]]:
+    """Canonical HEAD entries, independent of index skip-worktree flags."""
+    result = {}
+    for item in _git(root, "ls-tree", "-r", "-z", "--full-tree", "HEAD").split(b"\0"):
+        if not item:
+            continue
+        try:
+            metadata, name = item.split(b"\t", 1)
+            mode, kind, oid = metadata.split(b" ")
+        except ValueError as exc:
+            raise TrialRejected("INVALID_COMMIT_TREE") from exc
+        if (name in result or kind != b"blob" or mode not in (b"100644", b"100755")
+                or not SHA.fullmatch(oid.decode("ascii"))):
+            raise TrialRejected("UNSAFE_TRACKED_ENTRY")
+        result[name] = mode, oid
+        if len(result) > MAX_FILES:
+            raise TrialRejected("SOURCE_LIMIT")
+    return result
+
+
 def capture(repo: str | Path, expected_sha: str) -> tuple[dict, list[tuple[str, bytes]]]:
     """Return bytes of tracked regular files and their content-pinned manifest."""
     root = Path(repo)
@@ -82,6 +151,7 @@ def capture(repo: str | Path, expected_sha: str) -> tuple[dict, list[tuple[str, 
         raise TrialRejected("SOURCE_COMMIT_MISMATCH")
     if _git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all"):
         raise TrialRejected("SOURCE_DIRTY")
+    committed = _committed_tree(root)
     rows = _git(root, "ls-files", "--stage", "-z").split(b"\0")
     entries = []
     total = 0
@@ -90,7 +160,7 @@ def capture(repo: str | Path, expected_sha: str) -> tuple[dict, list[tuple[str, 
             continue
         try:
             metadata, name_bytes = raw.split(b"\t", 1)
-            mode, _, stage = metadata.split(b" ")
+            mode, oid, stage = metadata.split(b" ")
             name = name_bytes.decode("utf-8", "strict")
         except (ValueError, UnicodeError) as exc:
             raise TrialRejected("INVALID_TRACKED_NAME") from exc
@@ -98,22 +168,20 @@ def capture(repo: str | Path, expected_sha: str) -> tuple[dict, list[tuple[str, 
                 name.startswith("/") or "\\" in name or "\0" in name or
                 any(part in ("", ".", "..") for part in name.split("/"))):
             raise TrialRejected("UNSAFE_TRACKED_ENTRY")
-        path = root / name
-        if not path.is_file() or path.is_symlink() or not stat.S_ISREG(path.lstat().st_mode):
-            raise TrialRejected("UNSAFE_TRACKED_ENTRY")
-        # Reject symlinked intermediate directories, too.
-        current = path.parent
-        while current != root:
-            if current.is_symlink():
-                raise TrialRejected("UNSAFE_TRACKED_ENTRY")
-            current = current.parent
-        data = path.read_bytes()
-        total += len(data)
-        if total > MAX_SOURCE_BYTES or len(entries) >= MAX_FILES:
+        if committed.get(name_bytes) != (mode, oid):
+            raise TrialRejected("INDEX_COMMIT_MISMATCH")
+        if len(entries) >= MAX_FILES:
             raise TrialRejected("SOURCE_LIMIT")
+        data = _read_tracked_nofollow(root, name, MAX_SOURCE_BYTES - total)
+        blob_id = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
+        if blob_id != oid.decode("ascii"):
+            raise TrialRejected("TRACKED_BLOB_MISMATCH")
+        total += len(data)
         entries.append((name, data))
     if not entries:
         raise TrialRejected("EMPTY_SOURCE")
+    if len(entries) != len(committed):
+        raise TrialRejected("INDEX_COMMIT_MISMATCH")
     files = [{"path": name, "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
              for name, data in sorted(entries)]
     tree_sha = _git(root, "rev-parse", "HEAD^{tree}").decode().strip()
@@ -244,6 +312,40 @@ def execute(repo: str | Path, binding: dict, image: str, key: bytes,
     return {"payload": payload, "signature": {"algorithm": "hmac-sha256", "value": signature}}
 
 
+def valid_source_manifest(value: object) -> bool:
+    """Validate internal file counts and paths, not just an externally signed digest."""
+    if not isinstance(value, dict) or set(value) != {
+            "format", "source_sha", "git_tree_sha", "file_count", "total_bytes",
+            "files", "manifest_sha256"}:
+        return False
+    if (value["format"] != "qa.git-source-manifest.v1"
+            or not isinstance(value["source_sha"], str) or not SHA.fullmatch(value["source_sha"])
+            or not isinstance(value["git_tree_sha"], str) or not SHA.fullmatch(value["git_tree_sha"])
+            or type(value["file_count"]) is not int or not 1 <= value["file_count"] <= MAX_FILES
+            or type(value["total_bytes"]) is not int or not 0 <= value["total_bytes"] <= MAX_SOURCE_BYTES
+            or not isinstance(value["files"], list)
+            or len(value["files"]) != value["file_count"]):
+        return False
+    total = 0
+    previous = None
+    for item in value["files"]:
+        if not isinstance(item, dict) or set(item) != {"path", "sha256", "bytes"}:
+            return False
+        name = item["path"]
+        if (not isinstance(name, str) or name.startswith("/") or "\\" in name or "\0" in name
+                or any(segment in ("", ".", "..") for segment in name.split("/"))
+                or (previous is not None and name <= previous)):
+            return False
+        if (not isinstance(item["sha256"], str) or not DIGEST.fullmatch(item["sha256"])
+                or type(item["bytes"]) is not int or not 0 <= item["bytes"] <= MAX_SOURCE_BYTES):
+            return False
+        total += item["bytes"]
+        if total > MAX_SOURCE_BYTES:
+            return False
+        previous = name
+    return total == value["total_bytes"]
+
+
 def verify(envelope: object, expected_binding: object, key: bytes, *,
            expected_manifest_sha256: str, expected_image: str,
            minimum_tests: int) -> dict:
@@ -268,7 +370,9 @@ def verify(envelope: object, expected_binding: object, key: bytes, *,
         if validate_binding(payload["binding"]) != binding:
             raise TrialRejected("BINDING_MISMATCH")
         src = payload.get("source_manifest")
-        if not isinstance(src, dict) or src.get("source_sha") != binding["source_sha"]:
+        if not valid_source_manifest(src):
+            raise TrialRejected("INVALID_SOURCE_MANIFEST")
+        if src.get("source_sha") != binding["source_sha"]:
             raise TrialRejected("SOURCE_MISMATCH")
         digest = src.get("manifest_sha256")
         source_without_hash = {k: v for k, v in src.items() if k != "manifest_sha256"}
