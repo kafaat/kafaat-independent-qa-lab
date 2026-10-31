@@ -11,7 +11,7 @@ import tempfile
 import unittest
 
 from qa_lab.project_trial import (TrialRejected, capture, canonical, docker_argv,
-                                  execute, validate_binding, verify)
+                                  execute, validate_binding, verify, _read_tracked_nofollow)
 
 IMAGE = "python:3.12-slim-bookworm@sha256:" + "9" * 64
 
@@ -74,6 +74,28 @@ class SourceTrials(unittest.TestCase):
         (self.root / "tests" / "test_example.py").write_text("changed")
         with self.assertRaisesRegex(TrialRejected, "SOURCE_DIRTY"):
             capture(self.root, self.commit)
+
+    def test_assume_unchanged_cannot_hide_changed_git_blob(self):
+        path = self.root / "tests" / "test_example.py"
+        git(self.root, "update-index", "--assume-unchanged", "tests/test_example.py")
+        raw = path.read_bytes()
+        self.assertIn(b"2 + 2", raw)
+        path.write_bytes(raw.replace(b"2 + 2", b"3 + 3"))
+        self.assertEqual(git(self.root, "status", "--porcelain=v1"), "")
+        with self.assertRaisesRegex(TrialRejected, "TRACKED_BLOB_MISMATCH"):
+            capture(self.root, self.commit)
+
+    def test_symlinked_ancestor_refused_by_descriptor_walk(self):
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "secret.txt").write_text("private")
+        (self.root / "link").symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(TrialRejected, "UNSAFE_TRACKED_ENTRY"):
+            _read_tracked_nofollow(self.root, "link/secret.txt", 20)
+
+    def test_large_tracked_file_is_rejected_before_read(self):
+        with self.assertRaisesRegex(TrialRejected, "SOURCE_LIMIT"):
+            _read_tracked_nofollow(self.root, "tests/test_example.py", 1)
 
     def test_untracked_file_rejected(self):
         (self.root / "tests" / "evil.py").write_text("print('evil')")
@@ -139,6 +161,22 @@ class SourceTrials(unittest.TestCase):
         receipt = self.signed()
         receipt["payload"]["tests_observed"] = 100
         self.assertEqual(self.checked(receipt)["status"], "REJECTED")
+
+    def test_signed_but_internally_invalid_manifest_rejected(self):
+        for field, value in (("file_count", 2), ("total_bytes", 99)):
+            with self.subTest(field=field):
+                receipt = self.signed()
+                manifest = receipt["payload"]["source_manifest"]
+                manifest[field] = value
+                manifest["manifest_sha256"] = hashlib.sha256(canonical({
+                    k: v for k, v in manifest.items() if k != "manifest_sha256"
+                })).hexdigest()
+                receipt["signature"]["value"] = hmac.new(
+                    self.key, canonical(receipt["payload"]), hashlib.sha256).hexdigest()
+                result = verify(receipt, self.b, self.key,
+                    expected_manifest_sha256=manifest["manifest_sha256"],
+                    expected_image=IMAGE, minimum_tests=2)
+                self.assertIn("INVALID_SOURCE_MANIFEST", result["reasons"])
 
     def test_wrong_expected_manifest_rejected(self):
         receipt = self.signed()
