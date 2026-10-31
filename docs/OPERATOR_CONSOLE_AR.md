@@ -60,7 +60,10 @@ QA_UI_COOKIE_SECURE=1، لكن لا يترتب على ذلك أي تصريح ب�
 تغطي tests/test_operator_console.py سلوك HTTP المحلي، الجلسات وCSRF،
 وتقنين الوصفات، ومنع تسريب رمز Bearer وXSS، ورفض Host غير محلي،
 وعرض الإيصالات. تغطي tests/test_run_catalog.py التصفية وحقن SQL
-والتقسيم ومصادقة API. شغلهما مع مجموعة الانحدار الكاملة قبل الدمج:
+والتقسيم ومصادقة API. ويتحقق tests/test_console_e2e.py من المسار
+الفعلي: المتصفح -> الواجهة -> API -> قاعدة SQLite -> العامل -> الإيصال
+ومن كشف تغيير بصمة الإيصال. واختبار رد 302 يضمن عدم إعادة إرسال رمز
+Bearer إلى جهة أخرى عند التحويل. تُضمّن ملفات CSS داخل حزمة Python. شغلهما مع مجموعة الانحدار الكاملة قبل الدمج:
 
 python -W error::ResourceWarning -m unittest discover -s tests -v
 

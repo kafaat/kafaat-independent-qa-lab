@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from http.cookies import SimpleCookie
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlsplit
-from urllib.request import Request, ProxyHandler, build_opener
+from urllib.request import Request, ProxyHandler, HTTPRedirectHandler, build_opener
 
 RECIPES = ("python-smoke",)
 STATUSES = ("PENDING", "RUNNING", "PASSED", "FAILED", "BLOCKED", "TIMED_OUT")
@@ -117,6 +117,12 @@ class APIUnavailable(Exception):
     pass
 
 
+class RejectRedirect(HTTPRedirectHandler):
+    """A backend redirect must never forward the privileged bearer token."""
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
 class LabAPI:
     """Server-side only; never serialize the bearer token in responses."""
     def __init__(self, base_url, token):
@@ -127,7 +133,7 @@ class LabAPI:
             raise ValueError("invalid internal API configuration")
         self.base = base_url.rstrip("/")
         self.token = token
-        self.opener = build_opener(ProxyHandler({}))  # Ignore HTTP_PROXY for the bearer token.
+        self.opener = build_opener(ProxyHandler({}), RejectRedirect())  # No proxy or redirects may carry the bearer.
 
     def request(self, method, path, payload=None):
         if not path.startswith("/") or "//" in path or "\r" in path or "\n" in path:

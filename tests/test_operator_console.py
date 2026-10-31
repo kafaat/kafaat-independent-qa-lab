@@ -5,11 +5,11 @@ import re
 import threading
 import unittest
 import uuid
-from http.server import ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlencode
 from unittest.mock import patch
 
-from qa_lab.console import Console, SessionStore, check_password, password_hash, query_options
+from qa_lab.console import APIUnavailable, LabAPI, Console, SessionStore, check_password, password_hash, query_options
 
 PASSWORD = "synthetic-local-operator-password"
 API_TOKEN = "synthetic-server-side-token-123456789"
@@ -175,6 +175,48 @@ class ConsoleHTTPTests(unittest.TestCase):
         for q in ("status=BOGUS", "q=%0A", "q=1&q=2", "offset=10001", "limit=2"):
             with self.subTest(q=q), self.assertRaises(ValueError):
                 query_options(q)
+
+
+
+class RedirectSafetyTests(unittest.TestCase):
+    def test_authorization_never_follows_backend_redirect(self):
+        received = []
+        class Destination(BaseHTTPRequestHandler):
+            def do_GET(self):
+                received.append(self.headers.get("Authorization"))
+                self.send_response(200)
+                self.end_headers()
+            def log_message(self, *args):
+                pass
+
+        destination = ThreadingHTTPServer(("127.0.0.1", 0), Destination)
+        target_url = "http://127.0.0.1:" + str(destination.server_port) + "/capture"
+
+        class Redirect(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(302)
+                self.send_header("Location", target_url)
+                self.end_headers()
+            def log_message(self, *args):
+                pass
+
+        redirect = ThreadingHTTPServer(("127.0.0.1", 0), Redirect)
+        threads = []
+        for server in (destination, redirect):
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            threads.append(thread)
+        try:
+            client = LabAPI("http://127.0.0.1:" + str(redirect.server_port), API_TOKEN)
+            with self.assertRaises(APIUnavailable):
+                client.request("GET", "/v1/runs")
+            self.assertEqual(received, [], "a redirect must not transmit Bearer credentials")
+        finally:
+            for server in (redirect, destination):
+                server.shutdown()
+                server.server_close()
+            for thread in threads:
+                thread.join(5)
 
 
 if __name__ == "__main__":
