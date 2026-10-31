@@ -12,6 +12,8 @@ import json
 import os
 from pathlib import Path
 import re
+import selectors
+import time
 import shutil
 import stat
 import subprocess
@@ -167,29 +169,59 @@ def execute(repo: str | Path, binding: dict, image: str, key: bytes,
         env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": temporary,
                "DOCKER_CONFIG": str(Path(temporary) / "empty-docker-config")}
         (Path(temporary) / "empty-docker-config").mkdir()
-        with tempfile.TemporaryFile() as log:
-            try:
-                proc = subprocess.Popen(cmd, env=env, stdout=log, stderr=subprocess.STDOUT,
-                                        stdin=subprocess.DEVNULL, close_fds=True)
-                try:
-                    returncode = proc.wait(timeout=timeout)
-                    timed_out = False
-                except subprocess.TimeoutExpired:
-                    cleanup = subprocess.run(["docker", "rm", "-f", name], env=env,
-                                             capture_output=True, timeout=15, check=False)
-                    if cleanup.returncode != 0:
-                        proc.kill()
-                        proc.wait(timeout=10)
-                        raise TrialRejected("SANDBOX_CLEANUP_UNCONFIRMED")
-                    proc.kill()
-                    proc.wait(timeout=10)
-                    returncode, timed_out = -1, True
-            except (OSError, subprocess.SubprocessError) as exc:
-                raise TrialRejected("SANDBOX_UNAVAILABLE_OR_CLEANUP_UNKNOWN") from exc
-            log.seek(0)
-            output = log.read(1024 * 1024 + 1)
-            if len(output) > 1024 * 1024:
-                raise TrialRejected("SANDBOX_LOG_LIMIT")
+        try:
+            proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                    close_fds=True)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise TrialRejected("SANDBOX_UNAVAILABLE") from exc
+        output_parts: list[bytes] = []
+        total_output = 0
+        timed_out = False
+        over_limit = False
+        try:
+            assert proc.stdout is not None
+            with selectors.DefaultSelector() as poller:
+                os.set_blocking(proc.stdout.fileno(), False)
+                poller.register(proc.stdout, selectors.EVENT_READ)
+                deadline = time.monotonic() + timeout
+                while poller.get_map():
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        timed_out = True
+                        break
+                    for key, _ in poller.select(min(remaining, 0.25)):
+                        chunk = os.read(key.fileobj.fileno(), 65536)
+                        if not chunk:
+                            poller.unregister(key.fileobj)
+                        else:
+                            total_output += len(chunk)
+                            if total_output > 1024 * 1024:
+                                over_limit = True
+                                break
+                            output_parts.append(chunk)
+                    if over_limit:
+                        break
+            if timed_out or over_limit:
+                cleanup = subprocess.run(["docker", "rm", "-f", name], env=env,
+                                         capture_output=True, timeout=15, check=False)
+                if cleanup.returncode != 0:
+                    raise TrialRejected("SANDBOX_CLEANUP_UNCONFIRMED")
+                proc.kill()
+                proc.wait(timeout=10)
+                if over_limit:
+                    raise TrialRejected("SANDBOX_LOG_LIMIT")
+                returncode = -1
+            else:
+                returncode = proc.wait(timeout=5)
+        except (OSError, subprocess.SubprocessError):
+            raise TrialRejected("SANDBOX_UNAVAILABLE_OR_CLEANUP_UNKNOWN") from None
+        finally:
+            proc.stdout.close()
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=10)
+        output = b"".join(output_parts)
     after, _ = capture(repo, b["source_sha"])
     if before != after:
         raise TrialRejected("SOURCE_CHANGED_DURING_EXECUTION")
