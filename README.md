@@ -20,3 +20,20 @@ receipt hash is not production/release approval. Live deployment/recovery,
 individual user sessions and project authorization, broader recipe acceptance,
 and legacy licensing/provenance/secret reviews remain separately gated.
 No production deployment is performed by the root-stack acceptance workflow.
+
+## Optional local operator console
+An opt-in, loopback-only server-rendered browser console now supports a single
+local operator: login/logout, bounded run search and pagination, approved-recipe
+submission, run detail, and receipt hash verification. The browser never receives
+the administrative API bearer token. See [operator console setup and security
+boundaries](docs/OPERATOR_CONSOLE_AR.md). This is NOT multi-user project RBAC or
+a public deployment. The default Compose startup remains unchanged.
+
+## Operator UI container acceptance
+
+A dedicated isolated, opt-in Docker Compose acceptance checks the actual
+localhost operator-ui container, real browser submission -> API -> SQLite
+worker -> receipt, secret boundaries, logout and restart, and cleanup.
+See [operator acceptance](docs/OPERATOR_COMPOSE_ACCEPTANCE_AR.md) and
+[reviewed security boundaries](docs/OPERATOR_SECURITY_REVIEW.md).
+This proves neither project RBAC nor public deployment readiness.

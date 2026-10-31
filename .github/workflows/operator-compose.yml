@@ -1,0 +1,31 @@
+name: Operator console Compose acceptance
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  operator-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      QA_OPERATOR_COMPOSE_OPT_IN: isolated-ci
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Fail-closed Compose and security preflight
+        run: python -W error::ResourceWarning -m unittest discover -s tests -p 'test_operator_compose_contract.py' -v
+      - name: Fresh localhost operator profile browser to worker acceptance
+        id: live
+        run: python scripts/verify_operator_compose.py --output "$RUNNER_TEMP/operator-console/receipt.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() && steps.live.outcome != 'skipped' }}
+        with:
+          name: operator-compose-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/operator-console/receipt.json
+          if-no-files-found: error
+          retention-days: 14
