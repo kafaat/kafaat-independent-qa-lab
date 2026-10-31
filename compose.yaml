@@ -27,7 +27,7 @@ services:
       - "127.0.0.1:${QA_API_PORT:-8765}:8765"
     volumes:
       - qa-data:/data
-    networks: [qa-internal]
+    networks: [qa-internal, qa-edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/healthz', timeout=2)"]
       interval: 3s
@@ -85,6 +85,7 @@ services:
       timeout: 3s
       retries: 20
 networks:
+  qa-edge: {}
   qa-internal:
     internal: true
 volumes:

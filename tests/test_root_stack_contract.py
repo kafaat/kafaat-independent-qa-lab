@@ -65,5 +65,17 @@ class RootStackContractTests(unittest.TestCase):
         self.assertIn('QA_REQUIRE_GIT_SHA: "1"', source)
 
 
+    def test_only_api_has_edge_network(self):
+        source = (ROOT / 'compose.yaml').read_text()
+        api = source.split('  api:\n', 1)[1].split('  worker:\n', 1)[0]
+        self.assertIn('networks: [qa-internal, qa-edge]', api)
+        for name, next_name in (('worker', 'evidence'), ('evidence', 'triage')):
+            block = source.split('  ' + name + ':\n', 1)[1].split('  ' + next_name + ':\n', 1)[0]
+            self.assertIn('networks: [qa-internal]', block)
+            self.assertNotIn('qa-edge', block)
+        self.assertEqual(source.count('networks: [qa-internal, qa-edge]'), 1)
+        self.assertIn('  qa-internal:\n    internal: true', source)
+
+
 if __name__ == '__main__':
     unittest.main()
