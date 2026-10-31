@@ -27,6 +27,12 @@ IDENTIFIERS = ("tenant_id", "project_id", "case_id", "cycle_no", "snapshot_id",
                "attempt_no", "criteria_digest", "source_sha")
 MAX_FILES = 5000
 MAX_SOURCE_BYTES = 32 * 1024 * 1024
+PAYLOAD_FIELDS = frozenset({
+    "format", "binding", "source_manifest", "sandbox", "image", "recipe",
+    "result", "tests_observed", "exit_code", "skipped_detected", "output_sha256",
+    "source_verified_by_runner", "source_attested_independently",
+    "production_accepted", "authority",
+})
 
 
 class TrialRejected(ValueError):
@@ -294,11 +300,14 @@ def execute(repo: str | Path, binding: dict, image: str, key: bytes,
     if before != after:
         raise TrialRejected("SOURCE_CHANGED_DURING_EXECUTION")
     text = output.decode("utf-8", "replace")
-    match = re.search(r"(?m)^Ran ([0-9]+) tests? in ", text)
-    count = int(match.group(1)) if match else 0
+    # A test module can print a fake unittest summary. Requiring exactly one
+    # complete summary prevents its output from becoming an inflated test count.
+    summaries = re.findall(r"(?m)^Ran ([0-9]+) tests? in [0-9]+(?:\.[0-9]+)?s\s*$", text)
+    ok_lines = re.findall(r"(?m)^OK\s*$", text)
+    count = int(summaries[0]) if len(summaries) == 1 else 0
     has_skips = bool(re.search(r"\(skipped=|skipped [0-9]+", text))
-    passed = not timed_out and returncode == 0 and count > 0 and not has_skips and bool(
-        re.search(r"(?m)^OK\s*$", text))
+    passed = (not timed_out and returncode == 0 and count > 0
+              and len(summaries) == 1 and len(ok_lines) == 1 and not has_skips)
     payload = {"format": "qa.reviewed-project-trial.v1", "binding": b,
                "source_manifest": before, "sandbox": "docker-no-network-read-only-capdrop",
                "image": image, "recipe": "python-unittest-discover-v1",
@@ -365,6 +374,8 @@ def verify(envelope: object, expected_binding: object, key: bytes, *,
         if type(key) is not bytes or len(key) < 32 or not hmac.compare_digest(
                 hmac.new(key, canonical(payload), hashlib.sha256).hexdigest(), sig["value"]):
             raise TrialRejected("SIGNATURE_MISMATCH")
+        if set(payload) != PAYLOAD_FIELDS:
+            raise TrialRejected("UNEXPECTED_RECEIPT_FIELDS")
         if not isinstance(payload.get("binding"), dict):
             raise TrialRejected("BINDING_MISMATCH")
         if validate_binding(payload["binding"]) != binding:
