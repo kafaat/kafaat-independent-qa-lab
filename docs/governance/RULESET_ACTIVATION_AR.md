@@ -6,17 +6,27 @@
 
 **لا يعني موافقة على النشر الإنتاجي**: يبقى اعتماد النشر العام، والهويات متعددة المستخدمين، وRBAC والاستعادة والأمن التشغيلي قرارات منفصلة.
 
-## آخر حالة حية مؤكدة — تختلف عن السياسة المطلوبة
+## آخر حالة حية مؤكدة — مطابقة للسياسة منذ 1 نوفمبر 2026، 20:00 بتوقيت عدن
 
-- القاعدة الحالية: https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547
-- آخر قراءة بحساب إداري في 1 نوفمبر 2026 (19:40 بتوقيت عدن): enforcement=active، scope=refs/heads/main، bypass_actors=[]، current_user_can_bypass=never، main.protected=true، updated_at=2026-11-01T03:26:25+03:00.
-- **تطلب حاليًا موافقة واحدة**: required_approving_review_count=1، مع last-push approval وdismiss_stale_reviews_on_push وrequired_review_thread_resolution مفعّلة.
-- **بوابة موافقة خامسة لم تكن موثقة سابقًا**: require_extra_approval_for_unattributed_changes=true، وتظهر في الواجهة باسم "Require an additional approval for unattributed Copilot pull requests". بحسب وصف GitHub تضيف موافقة واحدة على طلبات Copilot غير المنسوبة لإنسان **فقط إذا كان عدد الموافقات المطلوب أكبر من صفر**؛ لا تفرض موافقة عند الصفر، لكن السياسة تعطّلها صراحةً حتى تكون القاعدة الحية مطابقة للملف ولا تعود تلقائيًا إذا رُفع العدد.
+- القاعدة: https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547
+- عدّلها مالك المستودع من Settings؛ updated_at=2026-11-01T20:00:25.919+03:00.
+- قراءة إدارية وتحقق بالأداة verify_live_ruleset.py عند 2026-11-01T17:00:39Z: **PASS**.
+  - required_approving_review_count=0، وdismiss_stale_reviews_on_push وrequire_last_push_approval وrequired_review_thread_resolution وrequire_code_owner_review وrequire_extra_approval_for_unattributed_changes كلها false، وrequired_reviewers=[].
+  - الفحوص الأربعة test وoperator-ui وroot-stack وhttp-stack من GitHub Actions App ID 15368، مع strict=true وdo_not_enforce_on_create=false.
+  - deletion وnon_fast_forward مفعّلتان، وbypass_actors=[]، وcurrent_user_can_bypass=never، وmain.protected=true، وenforcement=active على refs/heads/main فقط.
+- اسم القاعدة الحي ما زال "QA Lab main — independent review and verified CI"؛ لا أثر له في السلوك، ويمكن تغييره إلى "QA Lab main — required CI, optional human review".
+- قبل التعديل كانت القاعدة تطلب موافقة واحدة مع البوابات الأربع الأخرى، ومنها require_extra_approval_for_unattributed_changes=true، وتظهر في الواجهة باسم "Require an additional approval for unattributed Copilot pull requests". بحسب وصف GitHub لا تضيف هذه البوابة موافقة إلا إذا كان العدد أكبر من صفر، لكن السياسة تعطّلها صراحةً حتى تبقى القاعدة الحية مطابقة للملف.
 - القراءة المجهولة عبر API لا تعرض bypass_actors؛ لذلك لا يُقبل إثبات "Bypass فارغ" إلا من قراءة بحساب إداري.
-- جرى هذا التغيير بالتزامن مع تحضير سياسة الإلغاء. لذا **لم يُنفّذ قرار المالك في إعدادات GitHub الفعلية بعد**.
-- الفحوص الأربعة الإلزامية لم تتغير: test وoperator-ui وroot-stack وhttp-stack (GitHub Actions App ID 15368)، مع strict checks ومنع الحذف وforce push.
 
-القالب الجديد هو **سياسة مستهدفة بعد التفعيل**، ولا تعدل ملفات JSON قواعد GitHub تلقائيًا. بعد إزالة شرط الموافقة من Settings يجب تأكيد الصفر بقراءة API جديدة.
+### الاختبار السلوكي للسياسة الجديدة (1 نوفمبر 2026)
+
+- PR تجريبي غير إنتاجي #52، أُغلق دون دمج:
+  - التزام غير ضار 4769e94: 35/35 فحصًا ناجحًا، و0 مراجعات، وmergeable_state=**clean**. أثناء انتظار الفحوص كانت الحالة blocked.
+  - التزام باختبار فاشل عمدًا 5b91b31: فشل فحص test الإلزامي وحده، ونجحت الفحوص الثلاثة الأخرى، وmergeable_state=**blocked**.
+- PR #51 على aa502e1: 35/35 ناجحة، و0 مراجعات، وmergeable_state=clean بعد التعديل؛ وقبله على 707c7ee كانت الفحوص كلها ناجحة لكن الحالة blocked بسبب شرط الموافقة.
+- الخلاصة: غياب الموافقة البشرية وحده لم يعد يمنع الدمج، وفشل فحص إلزامي ما زال يمنعه.
+
+بعد أي تعديل لاحق في Settings يجب تشغيل أداة التحقق من جديد وتسجيل النتيجة. الخطوات أدناه مرجع لإعادة الضبط إن تغيّرت القاعدة.
 
 ## الملفات الرسمية
 
