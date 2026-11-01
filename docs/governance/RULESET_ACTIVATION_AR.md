@@ -35,7 +35,7 @@
 8. اضغط Save changes وأكمل تأكيد الهوية إذا طلبه GitHub.
 9. افتح https://api.github.com/repos/kafaat/kafaat-independent-qa-lab/rulesets/26292547 وتأكد من required_approving_review_count=0 ومن بقية القيم، ثم تأكد أن main.protected=true.
 
-**لا تستورد main-ruleset.json كقاعدة ثانية**: هذه المستودع فيه Ruleset حية برقم 26292547، والدمج في Git وحده لا يحدث أي تغيّر في Settings.
+**لا تستورد main-ruleset.json كقاعدة ثانية**: هذا المستودع فيه Ruleset حية برقم 26292547، والدمج في Git وحده لا يحدث أي تغيّر في Settings.
 
 ## مساعد GitHub CLI — DRY RUN أولًا
 
