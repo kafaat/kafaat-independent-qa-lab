@@ -45,17 +45,25 @@ mandatory retrospective human security/functional sign-off for the local
 Independent QA Lab. Human review remains available **optionally**. It must never
 be recorded as completed unless actually performed.
 
-At the latest API inspection, [Ruleset #26292547](https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547)
-was still `Active` **with one human approval required**: the previous full-review
-policy was activated concurrently. This PR changes repository policy files,
-**not** the live GitHub settings. To implement the owner's new zero-approval
-decision, an authorized administrator must edit this **existing** Ruleset:
-set approvals to 0, disable last-push approval, stale-review dismissal and
-mandatory conversation resolution, and retain the four strict CI checks,
-pull-request requirement, no bypass, and deletion/force-push protection.
+Since 2026-11-01 20:00 (+03:00), live [Ruleset #26292547](https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547)
+requires **zero** human approvals with every review gate off, and still requires
+the four strict GitHub Actions checks, a pull request, no bypass, and
+deletion/force-push protection. The read-only verifier reported PASS, and a
+disposable PR (#52, closed unmerged) showed merging is allowed with no reviews
+when checks pass and blocked when the required `test` check fails.
+If the Ruleset is ever changed again, an administrator restores this **existing**
+Ruleset as follows:
+set approvals to 0, disable last-push approval, stale-review dismissal,
+mandatory conversation resolution and the extra approval for unattributed
+Copilot pull requests (`require_extra_approval_for_unattributed_changes`, previously
+enabled live; it only adds an approval when the count is above zero),
+and retain the four strict CI checks, pull-request requirement, no bypass, and
+deletion/force-push protection.
 The rule may then be renamed "QA Lab main — required CI, optional human review".
-Do not import a second overlapping Ruleset. Confirm the effective parameters
-through GitHub API after saving.
+Do not import a second overlapping Ruleset; an admin may instead `PUT` the
+canonical policy onto the existing ID 26292547. Confirm the effective
+parameters with the read-only `python tools/governance/verify_live_ruleset.py`
+using an admin-authenticated GitHub CLI.
 
 [Canonical JSON policy](docs/governance/main-ruleset.json),
 [legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),
