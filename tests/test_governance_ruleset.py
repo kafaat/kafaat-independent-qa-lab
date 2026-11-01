@@ -36,12 +36,12 @@ class RulesetPolicyTests(unittest.TestCase):
             "pull_request", "required_status_checks", "deletion", "non_fast_forward"
         })
 
-    def test_requires_independent_current_approval_and_resolved_threads(self):
+    def test_review_approval_is_not_mandatory(self):
         params = self.rules["pull_request"]
-        self.assertEqual(params["required_approving_review_count"], 1)
-        self.assertTrue(params["require_last_push_approval"])
-        self.assertTrue(params["dismiss_stale_reviews_on_push"])
-        self.assertTrue(params["required_review_thread_resolution"])
+        self.assertEqual(params["required_approving_review_count"], 0)
+        self.assertFalse(params["require_last_push_approval"])
+        self.assertFalse(params["dismiss_stale_reviews_on_push"])
+        self.assertFalse(params["required_review_thread_resolution"])
         self.assertFalse(params["require_code_owner_review"])
 
     def test_temporary_ci_only_proposal_has_no_approval_gate(self):
@@ -50,7 +50,7 @@ class RulesetPolicyTests(unittest.TestCase):
             rule["parameters"] for rule in policy["rules"]
             if rule["type"] == "pull_request"
         )
-        self.assertIn("CI only (temporary)", policy["name"])
+        self.assertEqual(policy, self.ruleset)
         self.assertEqual(review_rule["required_approving_review_count"], 0)
         self.assertEqual(policy["conditions"]["ref_name"]["include"], ["refs/heads/main"])
         checks = next(
@@ -80,8 +80,8 @@ class RulesetPolicyTests(unittest.TestCase):
 
     def test_governance_handoff_explicitly_disclaims_enforcement_and_review(self):
         guide = (ROOT / "docs" / "governance" / "RULESET_ACTIVATION_AR.md").read_text(encoding="utf-8")
-        self.assertIn("لم تُفعّل", guide)
-        self.assertIn("مراجعة بشرية مستقلة", guide)
+        self.assertIn("المراجعة البشرية اختيارية", guide)
+        self.assertIn("لا يعني موافقة على النشر الإنتاجي", guide)
         self.assertIn("Settings", guide)
 
 

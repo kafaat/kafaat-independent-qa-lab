@@ -12,8 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICIES = {
+    "main": ROOT / "docs" / "governance" / "main-ruleset.json",
     "ci-only": ROOT / "docs" / "governance" / "main-ruleset-ci-only.json",
-    "independent-review": ROOT / "docs" / "governance" / "main-ruleset.json",
 }
 REPOSITORY = "kafaat/kafaat-independent-qa-lab"
 GITHUB_HOST = "github.com"
@@ -32,23 +32,41 @@ def parse_args(argv=None):
         action="store_true",
         help="create the ruleset using the authenticated GitHub CLI",
     )
-    parser.add_argument(
-        "--reviewer-ready",
-        action="store_true",
-        help="confirm an eligible independent reviewer is available",
-    )
     return parser.parse_args(argv)
 
 
 def load_policy(policy_name):
+    """Validate the no-human-review policy without relaxing required CI."""
     policy = json.loads(POLICIES[policy_name].read_text(encoding="utf-8"))
-    if policy_name == "independent-review":
-        parameters = next(
-            rule["parameters"] for rule in policy["rules"]
-            if rule["type"] == "pull_request"
+    if policy.get("target") != "branch" or policy.get("enforcement") != "active":
+        raise ValueError("ruleset must target an active branch")
+    if policy.get("conditions", {}).get("ref_name") != {
+        "include": ["refs/heads/main"], "exclude": [],
+    }:
+        raise ValueError("ruleset must target main only")
+    if policy.get("bypass_actors"):
+        raise ValueError("bypass actors are not allowed")
+    rules = {rule["type"]: rule.get("parameters", {}) for rule in policy["rules"]}
+    if set(rules) != {
+        "pull_request", "required_status_checks", "deletion", "non_fast_forward"
+    }:
+        raise ValueError("mandatory CI and branch protection rules are missing")
+    review = rules["pull_request"]
+    if review.get("required_approving_review_count") != 0 or any(
+        review.get(flag) for flag in (
+            "dismiss_stale_reviews_on_push", "require_code_owner_review",
+            "require_last_push_approval", "required_review_thread_resolution",
         )
-        if parameters["required_approving_review_count"] < 1:
-            raise ValueError("the independent-review policy must require approval")
+    ):
+        raise ValueError("mandatory human review is not part of QA Lab policy")
+    checks = rules["required_status_checks"]
+    expected = {"test", "operator-ui", "root-stack", "http-stack"}
+    required = checks.get("required_status_checks", [])
+    if (not checks.get("strict_required_status_checks_policy")
+            or len(required) != 4
+            or {item.get("context") for item in required} != expected
+            or any(item.get("integration_id") != 15368 for item in required)):
+        raise ValueError("all four GitHub Actions checks remain mandatory")
     return policy
 
 
@@ -147,24 +165,12 @@ def create_ruleset(policy):
 
 def main(argv=None):
     args = parse_args(argv)
-    if args.reviewer_ready and args.policy != "independent-review":
-        print("--reviewer-ready only applies to the independent-review policy.", file=sys.stderr)
-        return 2
-    if args.policy == "independent-review" and args.apply and not args.reviewer_ready:
-        print(
-            "Refusing to apply the approval gate without --reviewer-ready; "
-            "confirm an eligible independent reviewer first.",
-            file=sys.stderr,
-        )
-        return 2
-
     policy = load_policy(args.policy)
     if not args.apply:
         print(f"DRY RUN — no GitHub request made for {REPOSITORY}.")
         print(json.dumps(policy, indent=2, ensure_ascii=False))
         print("Review the proposal, then add --apply to create it.")
-        if args.policy == "independent-review":
-            print("Before applying, ensure an eligible independent reviewer is available.")
+        print("Four CI checks are mandatory; human reviews are optional.")
         return 0
 
     try:
