@@ -93,6 +93,43 @@ class RulesetActivationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "mandatory human review"):
                 activate_ruleset.load_policy("main")
 
+    def test_loader_rejects_every_reenabled_human_gate(self):
+        for gate in activate_ruleset.HUMAN_REVIEW_GATES:
+            policy = activate_ruleset.load_policy("main")
+            review = next(r["parameters"] for r in policy["rules"]
+                          if r["type"] == "pull_request")
+            review[gate] = True
+            with self.subTest(gate=gate):
+                with self.assertRaisesRegex(ValueError, "mandatory human review"):
+                    activate_ruleset.validate_policy(policy)
+
+    def test_loader_rejects_omitted_human_gate(self):
+        # An omitted flag in a PUT could leave the live approval gate enabled.
+        for gate in activate_ruleset.HUMAN_REVIEW_GATES:
+            policy = activate_ruleset.load_policy("main")
+            review = next(r["parameters"] for r in policy["rules"]
+                          if r["type"] == "pull_request")
+            del review[gate]
+            with self.subTest(gate=gate):
+                with self.assertRaisesRegex(ValueError, "mandatory human review"):
+                    activate_ruleset.validate_policy(policy)
+
+    def test_loader_rejects_required_reviewer_teams(self):
+        policy = activate_ruleset.load_policy("main")
+        review = next(r["parameters"] for r in policy["rules"]
+                      if r["type"] == "pull_request")
+        review["required_reviewers"] = [{"reviewer": {"id": 1, "type": "Team"}}]
+        with self.assertRaisesRegex(ValueError, "mandatory human review"):
+            activate_ruleset.validate_policy(policy)
+
+    def test_loader_rejects_ci_checks_skipped_on_create(self):
+        policy = activate_ruleset.load_policy("main")
+        checks = next(r["parameters"] for r in policy["rules"]
+                      if r["type"] == "required_status_checks")
+        checks["do_not_enforce_on_create"] = True
+        with self.assertRaisesRegex(ValueError, "four GitHub Actions"):
+            activate_ruleset.validate_policy(policy)
+
     def test_duplicate_pull_request_rules_cannot_hide_approval_gate(self):
         policy = activate_ruleset.load_policy("main")
         original = next(rule for rule in policy["rules"]

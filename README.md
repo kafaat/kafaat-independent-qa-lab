@@ -50,12 +50,16 @@ was still `Active` **with one human approval required**: the previous full-revie
 policy was activated concurrently. This PR changes repository policy files,
 **not** the live GitHub settings. To implement the owner's new zero-approval
 decision, an authorized administrator must edit this **existing** Ruleset:
-set approvals to 0, disable last-push approval, stale-review dismissal and
-mandatory conversation resolution, and retain the four strict CI checks,
-pull-request requirement, no bypass, and deletion/force-push protection.
+set approvals to 0, disable last-push approval, stale-review dismissal,
+mandatory conversation resolution and the extra approval for unattributed
+changes (`require_extra_approval_for_unattributed_changes`, also enabled live),
+and retain the four strict CI checks, pull-request requirement, no bypass, and
+deletion/force-push protection.
 The rule may then be renamed "QA Lab main — required CI, optional human review".
-Do not import a second overlapping Ruleset. Confirm the effective parameters
-through GitHub API after saving.
+Do not import a second overlapping Ruleset; an admin may instead `PUT` the
+canonical policy onto the existing ID 26292547. Confirm the effective
+parameters with the read-only `python tools/governance/verify_live_ruleset.py`
+using an admin-authenticated GitHub CLI.
 
 [Canonical JSON policy](docs/governance/main-ruleset.json),
 [legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),

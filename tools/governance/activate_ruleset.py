@@ -17,6 +17,13 @@ POLICIES = {
 }
 REPOSITORY = "kafaat/kafaat-independent-qa-lab"
 GITHUB_HOST = "github.com"
+HUMAN_REVIEW_GATES = (
+    "dismiss_stale_reviews_on_push",
+    "require_code_owner_review",
+    "require_extra_approval_for_unattributed_changes",
+    "require_last_push_approval",
+    "required_review_thread_resolution",
+)
 LEGACY_MAIN_RULESET_NAMES = {
     "QA Lab main — CI only (temporary)",
     "QA Lab main — independent review and verified CI",
@@ -73,17 +80,17 @@ def validate_policy(policy):
         raise ValueError("mandatory CI and branch protection rules are missing")
     rules = {rule["type"]: rule.get("parameters", {}) for rule in rule_items}
     review = rules["pull_request"]
+    # Every human gate must be explicitly false: an omitted flag in an update
+    # payload could leave a live approval gate (e.g. unattributed changes) on.
     if review.get("required_approving_review_count") != 0 or any(
-        review.get(flag) for flag in (
-            "dismiss_stale_reviews_on_push", "require_code_owner_review",
-            "require_last_push_approval", "required_review_thread_resolution",
-        )
-    ):
+        review.get(flag) is not False for flag in HUMAN_REVIEW_GATES
+    ) or review.get("required_reviewers"):
         raise ValueError("mandatory human review is not part of QA Lab policy")
     checks = rules["required_status_checks"]
     expected = {"test", "operator-ui", "root-stack", "http-stack"}
     required = checks.get("required_status_checks", [])
     if (not checks.get("strict_required_status_checks_policy")
+            or checks.get("do_not_enforce_on_create")
             or len(required) != 4
             or {item.get("context") for item in required} != expected
             or any(item.get("integration_id") != 15368 for item in required)):
