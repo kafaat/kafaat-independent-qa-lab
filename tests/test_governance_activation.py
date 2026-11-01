@@ -93,6 +93,59 @@ class RulesetActivationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "mandatory human review"):
                 activate_ruleset.load_policy("main")
 
+    def test_duplicate_pull_request_rules_cannot_hide_approval_gate(self):
+        policy = activate_ruleset.load_policy("main")
+        original = next(rule for rule in policy["rules"]
+                        if rule["type"] == "pull_request")
+        unsafe = {
+            "type": "pull_request",
+            "parameters": {
+                **original["parameters"],
+                "required_approving_review_count": 1,
+            },
+        }
+        # Prior code silently retained only the final "0", while shipping
+        # [0, 1, 0] to GitHub. Duplicates must now fail before POST.
+        policy["rules"][1:1] = [unsafe, dict(original)]
+        with patch("pathlib.Path.read_text", return_value=json.dumps(policy)):
+            with self.assertRaisesRegex(ValueError, "duplicate rule types"):
+                activate_ruleset.load_policy("main")
+
+    def test_duplicate_check_rule_is_rejected_before_validation_dictionary(self):
+        policy = activate_ruleset.load_policy("ci-only")
+        checks = next(rule for rule in policy["rules"]
+                      if rule["type"] == "required_status_checks")
+        policy["rules"].append(dict(checks))
+        with patch("pathlib.Path.read_text", return_value=json.dumps(policy)):
+            with self.assertRaisesRegex(ValueError, "duplicate rule types"):
+                activate_ruleset.load_policy("ci-only")
+
+    def test_direct_create_rejects_duplicate_rule_without_github_process(self):
+        policy = activate_ruleset.load_policy("main")
+        original = policy["rules"][0]
+        unsafe = {
+            "type": "pull_request",
+            "parameters": {
+                **original["parameters"], "required_approving_review_count": 1
+            },
+        }
+        policy["rules"][1:1] = [unsafe, dict(original)]
+        with patch.object(
+            activate_ruleset.subprocess, "run",
+            side_effect=AssertionError("GitHub CLI must not run"),
+        ) as command:
+            with self.assertRaisesRegex(ValueError, "duplicate rule types"):
+                activate_ruleset.create_ruleset(policy)
+        command.assert_not_called()
+
+    def test_invalid_rule_list_fails_before_type_dictionary(self):
+        for bad_rules in (None, {}, [None], [{"type": []}], [{}]):
+            policy = activate_ruleset.load_policy("main")
+            policy["rules"] = bad_rules
+            with self.subTest(bad_rules=bad_rules):
+                with self.assertRaisesRegex(ValueError, "list of typed objects"):
+                    activate_ruleset.validate_policy(policy)
+
     def test_loader_rejects_missing_ci_check(self):
         policy = activate_ruleset.load_policy("main")
         checks = next(r["parameters"] for r in policy["rules"] if r["type"] == "required_status_checks")

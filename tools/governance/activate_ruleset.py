@@ -40,8 +40,15 @@ def parse_args(argv=None):
 
 
 def load_policy(policy_name):
-    """Validate the no-human-review policy without relaxing required CI."""
+    """Load and validate an importable ruleset proposal."""
     policy = json.loads(POLICIES[policy_name].read_text(encoding="utf-8"))
+    return validate_policy(policy)
+
+
+def validate_policy(policy):
+    """Fail closed on duplicate/unverified rules before any API submission."""
+    if not isinstance(policy, dict):
+        raise ValueError("ruleset policy must be an object")
     if policy.get("target") != "branch" or policy.get("enforcement") != "active":
         raise ValueError("ruleset must target an active branch")
     if policy.get("conditions", {}).get("ref_name") != {
@@ -50,11 +57,21 @@ def load_policy(policy_name):
         raise ValueError("ruleset must target main only")
     if policy.get("bypass_actors"):
         raise ValueError("bypass actors are not allowed")
-    rules = {rule["type"]: rule.get("parameters", {}) for rule in policy["rules"]}
-    if set(rules) != {
+    rule_items = policy.get("rules")
+    if not isinstance(rule_items, list) or any(
+        not isinstance(rule, dict) or not isinstance(rule.get("type"), str)
+        for rule in rule_items
+    ):
+        raise ValueError("ruleset rules must be a list of typed objects")
+    types = [rule["type"] for rule in rule_items]
+    if len(types) != len(set(types)):
+        raise ValueError("duplicate rule types are not allowed")
+    required_types = {
         "pull_request", "required_status_checks", "deletion", "non_fast_forward"
-    }:
+    }
+    if set(types) != required_types:
         raise ValueError("mandatory CI and branch protection rules are missing")
+    rules = {rule["type"]: rule.get("parameters", {}) for rule in rule_items}
     review = rules["pull_request"]
     if review.get("required_approving_review_count") != 0 or any(
         review.get(flag) for flag in (
@@ -136,6 +153,7 @@ def check_gh_auth():
 
 
 def create_ruleset(policy):
+    validate_policy(policy)  # Also protect direct callers before any GitHub CLI process.
     check_gh_auth()
     pages = run_gh_api(
         [
