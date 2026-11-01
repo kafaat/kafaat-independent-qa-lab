@@ -104,7 +104,7 @@ class RulesetActivationTests(unittest.TestCase):
                     activate_ruleset.validate_policy(policy)
 
     def test_loader_rejects_omitted_human_gate(self):
-        # An omitted flag in a PUT could leave the live approval gate enabled.
+        # An omitted flag in a PUT would leave a live review flag at an unstated value.
         for gate in activate_ruleset.HUMAN_REVIEW_GATES:
             policy = activate_ruleset.load_policy("main")
             review = next(r["parameters"] for r in policy["rules"]

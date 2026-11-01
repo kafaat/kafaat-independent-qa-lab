@@ -52,7 +52,8 @@ policy was activated concurrently. This PR changes repository policy files,
 decision, an authorized administrator must edit this **existing** Ruleset:
 set approvals to 0, disable last-push approval, stale-review dismissal,
 mandatory conversation resolution and the extra approval for unattributed
-changes (`require_extra_approval_for_unattributed_changes`, also enabled live),
+Copilot pull requests (`require_extra_approval_for_unattributed_changes`, also
+enabled live; it only adds an approval when the count is above zero),
 and retain the four strict CI checks, pull-request requirement, no bypass, and
 deletion/force-push protection.
 The rule may then be renamed "QA Lab main — required CI, optional human review".

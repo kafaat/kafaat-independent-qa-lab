@@ -11,7 +11,7 @@
 - القاعدة الحالية: https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547
 - آخر قراءة بحساب إداري في 1 نوفمبر 2026 (19:40 بتوقيت عدن): enforcement=active، scope=refs/heads/main، bypass_actors=[]، current_user_can_bypass=never، main.protected=true، updated_at=2026-11-01T03:26:25+03:00.
 - **تطلب حاليًا موافقة واحدة**: required_approving_review_count=1، مع last-push approval وdismiss_stale_reviews_on_push وrequired_review_thread_resolution مفعّلة.
-- **بوابة موافقة خامسة لم تكن موثقة سابقًا**: require_extra_approval_for_unattributed_changes=true. تطلب هذه الخاصية موافقة إضافية على التغييرات غير المنسوبة، وقد تبقي موافقة بشرية إلزامية حتى بعد ضبط العدد على صفر. يجب تعطيلها أيضًا.
+- **بوابة موافقة خامسة لم تكن موثقة سابقًا**: require_extra_approval_for_unattributed_changes=true، وتظهر في الواجهة باسم "Require an additional approval for unattributed Copilot pull requests". بحسب وصف GitHub تضيف موافقة واحدة على طلبات Copilot غير المنسوبة لإنسان **فقط إذا كان عدد الموافقات المطلوب أكبر من صفر**؛ لا تفرض موافقة عند الصفر، لكن السياسة تعطّلها صراحةً حتى تكون القاعدة الحية مطابقة للملف ولا تعود تلقائيًا إذا رُفع العدد.
 - القراءة المجهولة عبر API لا تعرض bypass_actors؛ لذلك لا يُقبل إثبات "Bypass فارغ" إلا من قراءة بحساب إداري.
 - جرى هذا التغيير بالتزامن مع تحضير سياسة الإلغاء. لذا **لم يُنفّذ قرار المالك في إعدادات GitHub الفعلية بعد**.
 - الفحوص الأربعة الإلزامية لم تتغير: test وoperator-ui وroot-stack وhttp-stack (GitHub Actions App ID 15368)، مع strict checks ومنع الحذف وforce push.
@@ -31,11 +31,11 @@
 2. اختر Edit. يمكن تغيير اسم القاعدة إلى "QA Lab main — required CI, optional human review".
 3. افتح Show additional settings أسفل Require a pull request before merging.
 4. اضبط Required approvals على **0**.
-5. ألغِ Dismiss stale pull request approvals وRequire approval of the most recent reviewable push وRequire conversation resolution before merging، وألغِ أي خيار يطلب موافقة إضافية على التغييرات غير المنسوبة (unattributed changes)؛ لا تُلزم Code Owners أو فرق المراجعة.
+5. ألغِ Dismiss stale pull request approvals وRequire approval of the most recent reviewable push وRequire conversation resolution before merging، وألغِ "Require an additional approval for unattributed Copilot pull requests"؛ لا تُلزم Code Owners أو فرق المراجعة.
 6. اترك Require a pull request before merging مفعّلًا، واترك Required status checks والـstrict/up-to-date مفعّلين، مع الفحوص الأربعة ومصدر GitHub Actions.
 7. اترك Restrict deletions وBlock force pushes مفعّلين، ولا تضف أي bypass actors.
 8. اضغط Save changes وأكمل تأكيد الهوية إذا طلبه GitHub.
-9. تحقّق بقراءة إدارية فقط: `python tools/governance/verify_live_ruleset.py`. تقرأ الأداة القاعدة 26292547 وفرع main بطلبات GET فقط، ويفشل إذا بقيت أي بوابة موافقة (بما فيها unattributed changes)، أو غاب bypass_actors من الرد، أو ضعفت الفحوص الأربعة، أو لم يكن main محميًا. سجّل المخرجات ووقتها في القضية #46.
+9. تحقّق بقراءة إدارية فقط: `python tools/governance/verify_live_ruleset.py`. تقرأ الأداة القاعدة 26292547 وفرع main بطلبات GET فقط، ويفشل إذا بقيت أي بوابة موافقة مفعّلة (بما فيها خيار Copilot)، أو غاب bypass_actors من الرد، أو ضعفت الفحوص الأربعة، أو لم يكن main محميًا. سجّل المخرجات ووقتها في القضية #46.
 
 ### بديل عبر GitHub CLI لتعديل القاعدة نفسها
 

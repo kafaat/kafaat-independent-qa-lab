@@ -80,8 +80,8 @@ def validate_policy(policy):
         raise ValueError("mandatory CI and branch protection rules are missing")
     rules = {rule["type"]: rule.get("parameters", {}) for rule in rule_items}
     review = rules["pull_request"]
-    # Every human gate must be explicitly false: an omitted flag in an update
-    # payload could leave a live approval gate (e.g. unattributed changes) on.
+    # Every human gate must be explicitly false so a PUT of this policy leaves
+    # no live review flag at an unstated value, and a readback must show all of them.
     if review.get("required_approving_review_count") != 0 or any(
         review.get(flag) is not False for flag in HUMAN_REVIEW_GATES
     ) or review.get("required_reviewers"):
