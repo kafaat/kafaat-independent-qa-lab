@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / "docs" / "governance" / "main-ruleset.json"
+CI_ONLY_POLICY = ROOT / "docs" / "governance" / "main-ruleset-ci-only.json"
 REQUIRED = {
     "test": ".github/workflows/python-tests.yml",
     "operator-ui": ".github/workflows/operator-compose.yml",
@@ -42,6 +43,21 @@ class RulesetPolicyTests(unittest.TestCase):
         self.assertTrue(params["dismiss_stale_reviews_on_push"])
         self.assertTrue(params["required_review_thread_resolution"])
         self.assertFalse(params["require_code_owner_review"])
+
+    def test_temporary_ci_only_proposal_has_no_approval_gate(self):
+        policy = json.loads(CI_ONLY_POLICY.read_text(encoding="utf-8"))
+        review_rule = next(
+            rule["parameters"] for rule in policy["rules"]
+            if rule["type"] == "pull_request"
+        )
+        self.assertIn("CI only (temporary)", policy["name"])
+        self.assertEqual(review_rule["required_approving_review_count"], 0)
+        self.assertEqual(policy["conditions"]["ref_name"]["include"], ["refs/heads/main"])
+        checks = next(
+            rule["parameters"]["required_status_checks"] for rule in policy["rules"]
+            if rule["type"] == "required_status_checks"
+        )
+        self.assertEqual({check["context"] for check in checks}, set(REQUIRED))
 
     def test_only_unique_github_actions_checks_required(self):
         params = self.rules["required_status_checks"]
