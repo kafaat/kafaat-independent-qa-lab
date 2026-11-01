@@ -44,7 +44,7 @@ class RulesetPolicyTests(unittest.TestCase):
         self.assertFalse(params["required_review_thread_resolution"])
         self.assertFalse(params["require_code_owner_review"])
 
-    def test_temporary_ci_only_proposal_has_no_approval_gate(self):
+    def test_legacy_ci_alias_has_no_approval_gate(self):
         policy = json.loads(CI_ONLY_POLICY.read_text(encoding="utf-8"))
         review_rule = next(
             rule["parameters"] for rule in policy["rules"]

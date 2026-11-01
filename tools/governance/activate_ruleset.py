@@ -17,6 +17,10 @@ POLICIES = {
 }
 REPOSITORY = "kafaat/kafaat-independent-qa-lab"
 GITHUB_HOST = "github.com"
+LEGACY_MAIN_RULESET_NAMES = {
+    "QA Lab main — CI only (temporary)",
+    "QA Lab main — independent review and verified CI",
+}
 
 
 def parse_args(argv=None):
@@ -148,9 +152,13 @@ def create_ruleset(policy):
         raise RuntimeError(
             "Unexpected paginated ruleset response; refusing to create a rule."
         )
-    if any(item.get("name") == policy["name"] for page in pages for item in page):
+    existing_names = {item.get("name") for page in pages for item in page}
+    if policy["name"] in existing_names or existing_names.intersection(
+        LEGACY_MAIN_RULESET_NAMES
+    ):
         raise RuntimeError(
-            f"A ruleset named {policy['name']!r} already exists; inspect it in GitHub Settings."
+            "A QA Lab main ruleset already exists; update the existing rule "
+            "in GitHub Settings instead of creating an overlapping rule."
         )
     created = run_gh_api(
         [

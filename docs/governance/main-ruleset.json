@@ -1,5 +1,5 @@
 {
-  "name": "QA Lab main — CI only (temporary)",
+  "name": "QA Lab main — required CI, optional human review",
   "target": "branch",
   "enforcement": "active",
   "conditions": {

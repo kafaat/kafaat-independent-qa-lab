@@ -18,7 +18,7 @@ class RulesetActivationTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
         self.assertIn("DRY RUN", output.getvalue())
-        self.assertIn("QA Lab main — CI only (temporary)", output.getvalue())
+        self.assertIn("QA Lab main — required CI, optional human review", output.getvalue())
         api.assert_not_called()
 
     def test_no_mandatory_human_review_in_main_policy(self):
@@ -185,6 +185,19 @@ class RulesetActivationTests(unittest.TestCase):
                 "repos/kafaat/kafaat-independent-qa-lab/rulesets?per_page=100&includes_parents=true",
             ]
         )
+
+    def test_legacy_live_ruleset_names_block_duplicate_creation(self):
+        for name in activate_ruleset.LEGACY_MAIN_RULESET_NAMES:
+            with self.subTest(name=name), patch.object(
+                activate_ruleset, "check_gh_auth"
+            ), patch.object(
+                activate_ruleset, "run_gh_api", return_value=[[{"name": name}]]
+            ) as api:
+                with self.assertRaisesRegex(RuntimeError, "already exists"):
+                    activate_ruleset.create_ruleset(
+                        activate_ruleset.load_policy("main")
+                    )
+                api.assert_called_once()
 
     def test_invalid_pagination_response_never_creates_ruleset(self):
         policy = activate_ruleset.load_policy("ci-only")
