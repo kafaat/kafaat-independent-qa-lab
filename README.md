@@ -45,12 +45,17 @@ mandatory retrospective human security/functional sign-off for the local
 Independent QA Lab. Human review remains available **optionally**. It must never
 be recorded as completed unless actually performed.
 
-The live [CI Ruleset #26292547](https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547)
-enforces pull requests, strict successful GitHub Actions contexts `test`,
-`operator-ui`, `root-stack`, and `http-stack`, and blocks deletion and
-force pushes to `main`. No human approvals or resolved-review-thread gate
-is mandated. The live rule's old name contains "temporary"; this is a legacy
-label, not a pending requirement to introduce human approvals.
+At the latest API inspection, [Ruleset #26292547](https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547)
+was still `Active` **with one human approval required**: the previous full-review
+policy was activated concurrently. This PR changes repository policy files,
+**not** the live GitHub settings. To implement the owner's new zero-approval
+decision, an authorized administrator must edit this **existing** Ruleset:
+set approvals to 0, disable last-push approval, stale-review dismissal and
+mandatory conversation resolution, and retain the four strict CI checks,
+pull-request requirement, no bypass, and deletion/force-push protection.
+The rule may then be renamed "QA Lab main — required CI, optional human review".
+Do not import a second overlapping Ruleset. Confirm the effective parameters
+through GitHub API after saving.
 
 [Canonical JSON policy](docs/governance/main-ruleset.json),
 [legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),

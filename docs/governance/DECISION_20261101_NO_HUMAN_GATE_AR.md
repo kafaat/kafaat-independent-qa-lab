@@ -13,14 +13,17 @@
 - تسمى المتطلبات الملغاة **WAIVED BY OWNER DECISION** لا **PASSED**؛ لا نصطنع موافقة مراجع أو اختبارًا لم يقع.
 - لا يمثّل هذا القرار ترخيصًا بالنشر الإنتاجي أو العام أو بالدمج التلقائي.
 
-## الأدلة الأساسية
+## الأدلة والفرق بين القرار والتفعيل
 
-- Ruleset الحية بتاريخ اتخاذ القرار: https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547
-- الحالة المثبتة: Active، refs/heads/main، عدد الموافقات الإلزامية صفر، بلا استثناءات.
-- Checks: test وoperator-ui وroot-stack وhttp-stack، كلها من GitHub Actions App ID 15368.
-- PR #44: https://github.com/kafaat/kafaat-independent-qa-lab/pull/44 — يظل تاريخ التنفيذ والاختبارات قائمًا، ولا يدّعي القرار وجود تدقيق بشري رجعي.
-- PR #48: https://github.com/kafaat/kafaat-independent-qa-lab/pull/48 — أدوات الحوكمة المدمجة لا تمثل شهادة أمنية لواجهة PR #44.
-- Issue #46: https://github.com/kafaat/kafaat-independent-qa-lab/issues/46 — يجب أن يذكر السجل التاريخي إلغاء الشرط لا إنجازه.
+- القاعدة القائمة: https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547
+- الحالة الحية عند آخر قراءة: Active مع موافقة بشرية إلزامية واحدة، وإبطال الموافقات القديمة وlast-push approval وحل الخيوط. هذه الحالة **لا تطابق قرار المالك الجديد**.
+- التفعيل المطلوب من مسؤول GitHub: تعديل القاعدة رقم 26292547 نفسها إلى صفر موافقات بشرية، دون تغيير الفحوص الإلزامية أو Bypass أو منع الحذف والدفع القسري. يجب إثبات التنفيذ عبر API بعد الحفظ.
+- الفحوص المستمرة: test وoperator-ui وroot-stack وhttp-stack، من GitHub Actions App ID 15368.
+- PR #44: https://github.com/kafaat/kafaat-independent-qa-lab/pull/44 — التنفيذ والفحوص موثقة، لكن هذا القرار ليس إثبات تدقيق بشري رجعي.
+- PR #48: https://github.com/kafaat/kafaat-independent-qa-lab/pull/48 — أدوات الحوكمة المدمجة لا تمثل شهادة أمان لـ PR #44.
+- PR #50: https://github.com/kafaat/kafaat-independent-qa-lab/pull/50 — تحديث ملفات السياسة، وليس تعديلًا مباشرًا لقاعدة GitHub الحية.
+- Issue #46: https://github.com/kafaat/kafaat-independent-qa-lab/issues/46 — يجب أن يذكر السجل التنازل عن المراجعة لا إنجازها.
+- تجربة PR #49 السلبية التاريخية أثبتت منع الدمج بفشل فحص وعدم وجود موافقة تحت القاعدة القديمة؛ لا تُستخدم وحدها إثباتًا للحالة الجديدة صفر موافقات.
 
 ## حدود المخاطر
 
