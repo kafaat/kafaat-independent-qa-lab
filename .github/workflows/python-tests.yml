@@ -13,6 +13,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Intentional negative governance check
+        run: |
+          echo "Intentionally failing to verify required-check merge blocking."
+          exit 1
       - name: SQLite lifecycle smoke
         run: PYTHONPATH=. python -W error::ResourceWarning -m unittest discover -s tests -p 'test_connection.py' -v
       - name: Require complete application before full acceptance
