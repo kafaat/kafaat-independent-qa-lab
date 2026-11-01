@@ -38,12 +38,34 @@ See [operator acceptance](docs/OPERATOR_COMPOSE_ACCEPTANCE_AR.md) and
 [reviewed security boundaries](docs/OPERATOR_SECURITY_REVIEW.md).
 This proves neither project RBAC nor public deployment readiness.
 
-## Branch protection and independent review
+## Branch protection and optional human review
 
-The importable **proposal** for `main` branch protection lives in
-[docs/governance/main-ruleset.json](docs/governance/main-ruleset.json), with
-[activation guidance](docs/governance/RULESET_ACTIVATION_AR.md) and an
-[independent human review handoff](docs/governance/INDEPENDENT_REVIEW_HANDOFF_AR.md).
-Committing these files does **not** activate GitHub Rulesets or constitute an
-independent approval. Governance completion remains tracked in
-[issue #46](https://github.com/kafaat/kafaat-independent-qa-lab/issues/46).
+On 2026-11-01, the repository owner removed **mandatory human approvals** and
+mandatory retrospective human security/functional sign-off for the local
+Independent QA Lab. Human review remains available **optionally**. It must never
+be recorded as completed unless actually performed.
+
+At the latest API inspection, [Ruleset #26292547](https://github.com/kafaat/kafaat-independent-qa-lab/rules/26292547)
+was still `Active` **with one human approval required**: the previous full-review
+policy was activated concurrently. This PR changes repository policy files,
+**not** the live GitHub settings. To implement the owner's new zero-approval
+decision, an authorized administrator must edit this **existing** Ruleset:
+set approvals to 0, disable last-push approval, stale-review dismissal and
+mandatory conversation resolution, and retain the four strict CI checks,
+pull-request requirement, no bypass, and deletion/force-push protection.
+The rule may then be renamed "QA Lab main — required CI, optional human review".
+Do not import a second overlapping Ruleset. Confirm the effective parameters
+through GitHub API after saving.
+
+[Canonical JSON policy](docs/governance/main-ruleset.json),
+[legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),
+[activation/readback guide](docs/governance/RULESET_ACTIVATION_AR.md),
+[optional security review checklist](docs/governance/INDEPENDENT_REVIEW_HANDOFF_AR.md),
+and [decision record](docs/governance/DECISION_20261101_NO_HUMAN_GATE_AR.md)
+describe the policy. Files alone do not activate or modify GitHub Rulesets.
+[Issue #46](https://github.com/kafaat/kafaat-independent-qa-lab/issues/46)
+keeps historical review decisions without manufacturing human sign-off.
+
+**This does not authorize public or production deployment.** Security controls
+for internet exposure, multi-user identity/RBAC, backup/restore, and an
+authorized release decision remain separate.

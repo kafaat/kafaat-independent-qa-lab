@@ -78,4 +78,4 @@ python -W error::ResourceWarning -m unittest discover -s tests -v
 وإبطال الجلسة وحماية الأسرار وتنظيف الموارد. التفاصيل في
 docs/OPERATOR_COMPOSE_ACCEPTANCE_AR.md،
 وتقييم المخاطر المتبقية في docs/OPERATOR_SECURITY_REVIEW.md.
-نجاح الاختبارات لا يغني عن مراجعة بشرية مستقلة ولا يجيز النشر العام.
+المراجعة البشرية اختيارية وليست شرطًا للدمج. نجاح فحوص CI مطلوب، لكنه لا يجيز النشر العام دون ضوابط تقنية وقرار نشر منفصل.

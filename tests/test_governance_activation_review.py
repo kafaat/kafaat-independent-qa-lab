@@ -159,14 +159,16 @@ class ActivationReviewTests(unittest.TestCase):
 
     def test_both_dry_runs_do_not_start_any_process(self):
         with patch.object(helper.subprocess, "run", side_effect=AssertionError("no process allowed")) as run:
-            for policy in ("ci-only", "independent-review"):
+            for policy in ("main", "ci-only"):
                 with contextlib.redirect_stdout(io.StringIO()):
                     self.assertEqual(helper.main(["--policy", policy]), 0)
         run.assert_not_called()
 
-    def test_independent_review_without_confirmation_never_starts_process(self):
+    def test_removed_human_gate_cannot_be_invoked(self):
         with patch.object(helper.subprocess, "run") as run, contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(helper.main(["--policy", "independent-review", "--apply"]), 2)
+            with self.assertRaises(SystemExit) as caught:
+                helper.main(["--policy", "independent-review", "--apply"])
+        self.assertEqual(caught.exception.code, 2)
         run.assert_not_called()
 
     def test_error_exit_does_not_announce_creation(self):

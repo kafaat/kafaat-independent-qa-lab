@@ -18,28 +18,23 @@ class RulesetActivationTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
         self.assertIn("DRY RUN", output.getvalue())
-        self.assertIn("QA Lab main — CI only (temporary)", output.getvalue())
+        self.assertIn("QA Lab main — required CI, optional human review", output.getvalue())
         api.assert_not_called()
 
-    def test_approval_policy_requires_explicit_reviewer_confirmation(self):
-        errors = io.StringIO()
-        with contextlib.redirect_stderr(errors):
-            result = activate_ruleset.main(
-                ["--policy", "independent-review", "--apply"]
-            )
+    def test_no_mandatory_human_review_in_main_policy(self):
+        policy = activate_ruleset.load_policy("main")
+        review = next(r["parameters"] for r in policy["rules"] if r["type"] == "pull_request")
+        self.assertEqual(review["required_approving_review_count"], 0)
+        self.assertFalse(review["require_last_push_approval"])
+        self.assertFalse(review["required_review_thread_resolution"])
 
-        self.assertEqual(result, 2)
-        self.assertIn("--reviewer-ready", errors.getvalue())
-
-    def test_reviewer_confirmation_is_only_valid_for_approval_policy(self):
-        errors = io.StringIO()
-        with contextlib.redirect_stderr(errors):
-            result = activate_ruleset.main(
-                ["--policy", "ci-only", "--reviewer-ready"]
-            )
-
-        self.assertEqual(result, 2)
-        self.assertIn("only applies", errors.getvalue())
+    def test_obsolete_review_policy_and_flag_are_rejected(self):
+        for args in (["--policy", "independent-review"],
+                     ["--policy", "main", "--reviewer-ready"]):
+            with self.subTest(args=args), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as result:
+                    activate_ruleset.parse_args(args)
+                self.assertEqual(result.exception.code, 2)
 
     def test_apply_checks_admin_auth_and_creates_selected_policy(self):
         policy = activate_ruleset.load_policy("ci-only")
@@ -86,15 +81,78 @@ class RulesetActivationTests(unittest.TestCase):
             ]
         )
 
-    def test_full_policy_requires_at_least_one_approval(self):
-        policy = activate_ruleset.load_policy("independent-review")
-        review_rule = next(
-            rule for rule in policy["rules"] if rule["type"] == "pull_request"
-        )
-        self.assertGreaterEqual(
-            review_rule["parameters"]["required_approving_review_count"], 1
-        )
+    def test_main_and_ci_only_policies_match(self):
+        self.assertEqual(activate_ruleset.load_policy("main"),
+                         activate_ruleset.load_policy("ci-only"))
 
+    def test_loader_rejects_reintroduced_human_approval(self):
+        policy = activate_ruleset.load_policy("main")
+        review = next(r["parameters"] for r in policy["rules"] if r["type"] == "pull_request")
+        review["required_approving_review_count"] = 1
+        with patch("pathlib.Path.read_text", return_value=json.dumps(policy)):
+            with self.assertRaisesRegex(ValueError, "mandatory human review"):
+                activate_ruleset.load_policy("main")
+
+    def test_duplicate_pull_request_rules_cannot_hide_approval_gate(self):
+        policy = activate_ruleset.load_policy("main")
+        original = next(rule for rule in policy["rules"]
+                        if rule["type"] == "pull_request")
+        unsafe = {
+            "type": "pull_request",
+            "parameters": {
+                **original["parameters"],
+                "required_approving_review_count": 1,
+            },
+        }
+        # Prior code silently retained only the final "0", while shipping
+        # [0, 1, 0] to GitHub. Duplicates must now fail before POST.
+        policy["rules"][1:1] = [unsafe, dict(original)]
+        with patch("pathlib.Path.read_text", return_value=json.dumps(policy)):
+            with self.assertRaisesRegex(ValueError, "duplicate rule types"):
+                activate_ruleset.load_policy("main")
+
+    def test_duplicate_check_rule_is_rejected_before_validation_dictionary(self):
+        policy = activate_ruleset.load_policy("ci-only")
+        checks = next(rule for rule in policy["rules"]
+                      if rule["type"] == "required_status_checks")
+        policy["rules"].append(dict(checks))
+        with patch("pathlib.Path.read_text", return_value=json.dumps(policy)):
+            with self.assertRaisesRegex(ValueError, "duplicate rule types"):
+                activate_ruleset.load_policy("ci-only")
+
+    def test_direct_create_rejects_duplicate_rule_without_github_process(self):
+        policy = activate_ruleset.load_policy("main")
+        original = policy["rules"][0]
+        unsafe = {
+            "type": "pull_request",
+            "parameters": {
+                **original["parameters"], "required_approving_review_count": 1
+            },
+        }
+        policy["rules"][1:1] = [unsafe, dict(original)]
+        with patch.object(
+            activate_ruleset.subprocess, "run",
+            side_effect=AssertionError("GitHub CLI must not run"),
+        ) as command:
+            with self.assertRaisesRegex(ValueError, "duplicate rule types"):
+                activate_ruleset.create_ruleset(policy)
+        command.assert_not_called()
+
+    def test_invalid_rule_list_fails_before_type_dictionary(self):
+        for bad_rules in (None, {}, [None], [{"type": []}], [{}]):
+            policy = activate_ruleset.load_policy("main")
+            policy["rules"] = bad_rules
+            with self.subTest(bad_rules=bad_rules):
+                with self.assertRaisesRegex(ValueError, "list of typed objects"):
+                    activate_ruleset.validate_policy(policy)
+
+    def test_loader_rejects_missing_ci_check(self):
+        policy = activate_ruleset.load_policy("main")
+        checks = next(r["parameters"] for r in policy["rules"] if r["type"] == "required_status_checks")
+        checks["required_status_checks"].pop()
+        with patch("pathlib.Path.read_text", return_value=json.dumps(policy)):
+            with self.assertRaisesRegex(ValueError, "four GitHub Actions"):
+                activate_ruleset.load_policy("main")
 
     def test_api_pins_github_host_even_with_enterprise_environment(self):
         response = subprocess.CompletedProcess(
@@ -181,6 +239,19 @@ class RulesetActivationTests(unittest.TestCase):
             ]
         )
 
+    def test_legacy_live_ruleset_names_block_duplicate_creation(self):
+        for name in activate_ruleset.LEGACY_MAIN_RULESET_NAMES:
+            with self.subTest(name=name), patch.object(
+                activate_ruleset, "check_gh_auth"
+            ), patch.object(
+                activate_ruleset, "run_gh_api", return_value=[[{"name": name}]]
+            ) as api:
+                with self.assertRaisesRegex(RuntimeError, "already exists"):
+                    activate_ruleset.create_ruleset(
+                        activate_ruleset.load_policy("main")
+                    )
+                api.assert_called_once()
+
     def test_invalid_pagination_response_never_creates_ruleset(self):
         policy = activate_ruleset.load_policy("ci-only")
         with patch.object(
@@ -190,12 +261,12 @@ class RulesetActivationTests(unittest.TestCase):
                 activate_ruleset.create_ruleset(policy)
         api.assert_called_once()
 
-    def test_full_policy_remains_dry_run_without_reviewer_or_apply(self):
+    def test_main_remains_dry_run_without_apply(self):
         with patch.object(activate_ruleset, "check_gh_auth") as auth:
             with patch.object(activate_ruleset, "run_gh_api") as api:
                 with contextlib.redirect_stdout(io.StringIO()):
                     result = activate_ruleset.main(
-                        ["--policy", "independent-review"]
+                        ["--policy", "main"]
                     )
         self.assertEqual(result, 0)
         auth.assert_not_called()

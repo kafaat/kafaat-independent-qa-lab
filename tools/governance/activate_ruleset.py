@@ -12,11 +12,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICIES = {
+    "main": ROOT / "docs" / "governance" / "main-ruleset.json",
     "ci-only": ROOT / "docs" / "governance" / "main-ruleset-ci-only.json",
-    "independent-review": ROOT / "docs" / "governance" / "main-ruleset.json",
 }
 REPOSITORY = "kafaat/kafaat-independent-qa-lab"
 GITHUB_HOST = "github.com"
+LEGACY_MAIN_RULESET_NAMES = {
+    "QA Lab main — CI only (temporary)",
+    "QA Lab main — independent review and verified CI",
+}
 
 
 def parse_args(argv=None):
@@ -32,23 +36,58 @@ def parse_args(argv=None):
         action="store_true",
         help="create the ruleset using the authenticated GitHub CLI",
     )
-    parser.add_argument(
-        "--reviewer-ready",
-        action="store_true",
-        help="confirm an eligible independent reviewer is available",
-    )
     return parser.parse_args(argv)
 
 
 def load_policy(policy_name):
+    """Load and validate an importable ruleset proposal."""
     policy = json.loads(POLICIES[policy_name].read_text(encoding="utf-8"))
-    if policy_name == "independent-review":
-        parameters = next(
-            rule["parameters"] for rule in policy["rules"]
-            if rule["type"] == "pull_request"
+    return validate_policy(policy)
+
+
+def validate_policy(policy):
+    """Fail closed on duplicate/unverified rules before any API submission."""
+    if not isinstance(policy, dict):
+        raise ValueError("ruleset policy must be an object")
+    if policy.get("target") != "branch" or policy.get("enforcement") != "active":
+        raise ValueError("ruleset must target an active branch")
+    if policy.get("conditions", {}).get("ref_name") != {
+        "include": ["refs/heads/main"], "exclude": [],
+    }:
+        raise ValueError("ruleset must target main only")
+    if policy.get("bypass_actors"):
+        raise ValueError("bypass actors are not allowed")
+    rule_items = policy.get("rules")
+    if not isinstance(rule_items, list) or any(
+        not isinstance(rule, dict) or not isinstance(rule.get("type"), str)
+        for rule in rule_items
+    ):
+        raise ValueError("ruleset rules must be a list of typed objects")
+    types = [rule["type"] for rule in rule_items]
+    if len(types) != len(set(types)):
+        raise ValueError("duplicate rule types are not allowed")
+    required_types = {
+        "pull_request", "required_status_checks", "deletion", "non_fast_forward"
+    }
+    if set(types) != required_types:
+        raise ValueError("mandatory CI and branch protection rules are missing")
+    rules = {rule["type"]: rule.get("parameters", {}) for rule in rule_items}
+    review = rules["pull_request"]
+    if review.get("required_approving_review_count") != 0 or any(
+        review.get(flag) for flag in (
+            "dismiss_stale_reviews_on_push", "require_code_owner_review",
+            "require_last_push_approval", "required_review_thread_resolution",
         )
-        if parameters["required_approving_review_count"] < 1:
-            raise ValueError("the independent-review policy must require approval")
+    ):
+        raise ValueError("mandatory human review is not part of QA Lab policy")
+    checks = rules["required_status_checks"]
+    expected = {"test", "operator-ui", "root-stack", "http-stack"}
+    required = checks.get("required_status_checks", [])
+    if (not checks.get("strict_required_status_checks_policy")
+            or len(required) != 4
+            or {item.get("context") for item in required} != expected
+            or any(item.get("integration_id") != 15368 for item in required)):
+        raise ValueError("all four GitHub Actions checks remain mandatory")
     return policy
 
 
@@ -114,6 +153,7 @@ def check_gh_auth():
 
 
 def create_ruleset(policy):
+    validate_policy(policy)  # Also protect direct callers before any GitHub CLI process.
     check_gh_auth()
     pages = run_gh_api(
         [
@@ -130,9 +170,13 @@ def create_ruleset(policy):
         raise RuntimeError(
             "Unexpected paginated ruleset response; refusing to create a rule."
         )
-    if any(item.get("name") == policy["name"] for page in pages for item in page):
+    existing_names = {item.get("name") for page in pages for item in page}
+    if policy["name"] in existing_names or existing_names.intersection(
+        LEGACY_MAIN_RULESET_NAMES
+    ):
         raise RuntimeError(
-            f"A ruleset named {policy['name']!r} already exists; inspect it in GitHub Settings."
+            "A QA Lab main ruleset already exists; update the existing rule "
+            "in GitHub Settings instead of creating an overlapping rule."
         )
     created = run_gh_api(
         [
@@ -147,24 +191,12 @@ def create_ruleset(policy):
 
 def main(argv=None):
     args = parse_args(argv)
-    if args.reviewer_ready and args.policy != "independent-review":
-        print("--reviewer-ready only applies to the independent-review policy.", file=sys.stderr)
-        return 2
-    if args.policy == "independent-review" and args.apply and not args.reviewer_ready:
-        print(
-            "Refusing to apply the approval gate without --reviewer-ready; "
-            "confirm an eligible independent reviewer first.",
-            file=sys.stderr,
-        )
-        return 2
-
     policy = load_policy(args.policy)
     if not args.apply:
         print(f"DRY RUN — no GitHub request made for {REPOSITORY}.")
         print(json.dumps(policy, indent=2, ensure_ascii=False))
         print("Review the proposal, then add --apply to create it.")
-        if args.policy == "independent-review":
-            print("Before applying, ensure an eligible independent reviewer is available.")
+        print("Four CI checks are mandatory; human reviews are optional.")
         return 0
 
     try:
