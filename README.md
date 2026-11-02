@@ -78,7 +78,9 @@ that was triggered. Missing checks fail closed at a 40-minute deadline; after
 re-running a failed job, re-run `ci-gate` too. Job names are unique across
 workflows and every action is pinned to a commit SHA. Preview the list offline
 with `python tools/ci/required_checks_gate.py --list`. The Ruleset must list
-`ci-gate` as a required check (owner action in Settings).
+`ci-gate` as a required check; the owner added it on 2026-11-02 (17:35 +03:00),
+the read-only verifier reported PASS, and disposable PR #54 (closed unmerged)
+was blocked when only the non-named `boundary` check failed.
 
 [Canonical JSON policy](docs/governance/main-ruleset.json),
 [legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),

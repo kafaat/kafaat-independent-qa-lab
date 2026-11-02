@@ -46,6 +46,14 @@
 
 السياسة المعتمدة تطلب الآن خمسة فحوص: الأربعة السابقة و**ci-gate**. في صفحة القاعدة 26292547 ← Require status checks to pass ← Show additional settings ← Add checks، ابحث عن `ci-gate` واختر مصدر GitHub Actions، ثم Save changes. لا تحذف الفحوص الأربعة. بعد الحفظ شغّل أداة التحقق؛ قبل الإضافة تعطي FAIL مقصودًا لأن القاعدة الحية لا تطابق السياسة.
 
+### التفعيل والتحقق الحي (2 نوفمبر 2026)
+
+- أضاف المالك ci-gate من Settings؛ updated_at=2026-11-02T17:35:41.143+03:00. الفحوص المطلوبة الحية: test وoperator-ui وroot-stack وhttp-stack وci-gate، كلها integration_id=15368، مع strict=true وdo_not_enforce_on_create=false.
+- verify_live_ruleset.py عند 2026-11-02T14:36:14Z: **PASS** (صفر موافقات، bypass_actors=[]، main.protected=true).
+- PR #53 على 050b269: ‏42/42 فحصًا ناجحًا، منها ci-gate التي انتظرت 35 فحصًا إلزاميًا وستة فحوص مقيدة بالمسارات تفعّلت؛ mergeable_state=**clean** تحت القاعدة الجديدة.
+- اختبار رفض حي على PR تجريبي #54 (أُغلق دون دمج)، مبني على فرع #53 مع كسر متعمد لفحص boundary غير المسمّى في القاعدة: الفحوص الأربعة المسماة نجحت، وفشل boundary وci-gate ("FAIL: boundary: failure")، وmergeable_state=**blocked**. قبل ci-gate كان فشل boundary لا يمنع الدمج.
+- سجل الاستقرار قبل التوسيع: 30 PR و1012 تشغيلًا دون أي فشل عدا الاختبارين السلبيين المقصودين.
+
 ## الملفات الرسمية
 
 - docs/governance/main-ruleset.json: السياسة المعتمدة دون موافقة بشرية إلزامية.
