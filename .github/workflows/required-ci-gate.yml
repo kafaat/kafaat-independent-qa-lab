@@ -23,4 +23,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GATE_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python -I tools/ci/required_checks_gate.py --sha "$GATE_SHA"
+        run: python -I -u tools/ci/required_checks_gate.py --sha "$GATE_SHA"
