@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
 jobs:
-  verify:
+  nats-start-verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

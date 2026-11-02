@@ -17,6 +17,10 @@ POLICIES = {
 }
 REPOSITORY = "kafaat/kafaat-independent-qa-lab"
 GITHUB_HOST = "github.com"
+GITHUB_ACTIONS_APP_ID = 15368
+# ci-gate (tools/ci/required_checks_gate.py) requires every check that runs on
+# every pull request; the other four stay listed individually as defence in depth.
+REQUIRED_CHECKS = frozenset({"test", "operator-ui", "root-stack", "http-stack", "ci-gate"})
 HUMAN_REVIEW_GATES = (
     "dismiss_stale_reviews_on_push",
     "require_code_owner_review",
@@ -87,14 +91,14 @@ def validate_policy(policy):
     ) or review.get("required_reviewers"):
         raise ValueError("mandatory human review is not part of QA Lab policy")
     checks = rules["required_status_checks"]
-    expected = {"test", "operator-ui", "root-stack", "http-stack"}
     required = checks.get("required_status_checks", [])
     if (not checks.get("strict_required_status_checks_policy")
             or checks.get("do_not_enforce_on_create")
-            or len(required) != 4
-            or {item.get("context") for item in required} != expected
-            or any(item.get("integration_id") != 15368 for item in required)):
-        raise ValueError("all four GitHub Actions checks remain mandatory")
+            or len(required) != len(REQUIRED_CHECKS)
+            or {item.get("context") for item in required} != REQUIRED_CHECKS
+            or any(item.get("integration_id") != GITHUB_ACTIONS_APP_ID
+                   for item in required)):
+        raise ValueError("all required GitHub Actions checks remain mandatory")
     return policy
 
 
@@ -203,7 +207,7 @@ def main(argv=None):
         print(f"DRY RUN — no GitHub request made for {REPOSITORY}.")
         print(json.dumps(policy, indent=2, ensure_ascii=False))
         print("Review the proposal, then add --apply to create it.")
-        print("Four CI checks are mandatory; human reviews are optional.")
+        print("ci-gate and four named CI checks are mandatory; human reviews are optional.")
         return 0
 
     try:

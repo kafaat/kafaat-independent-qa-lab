@@ -1,0 +1,329 @@
+"""Contract tests for the single required CI gate (tools/ci/required_checks_gate.py)."""
+import contextlib
+import io
+import tempfile
+import textwrap
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from tools.ci import required_checks_gate as gate
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOWS = ROOT / ".github" / "workflows"
+RULESET_REQUIRED = {"test", "operator-ui", "root-stack", "http-stack"}
+
+
+def run(name, conclusion="success", status="completed", run_id=1,
+        app_id=gate.GITHUB_ACTIONS_APP_ID):
+    return {"id": run_id, "name": name, "status": status,
+            "conclusion": conclusion if status == "completed" else None,
+            "app": {"id": app_id}}
+
+
+def write_workflows(directory, files):
+    for name, text in files.items():
+        (Path(directory) / name).write_text(textwrap.dedent(text), encoding="utf-8")
+
+
+GATE_WORKFLOW = """\
+name: gate
+on:
+  pull_request:
+jobs:
+  ci-gate:
+    runs-on: ubuntu-latest
+"""
+
+
+class RepositoryWorkflowTests(unittest.TestCase):
+    """The real workflow tree must parse and keep check names unique."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.expected, cls.every_name = gate.collect_check_names(WORKFLOWS)
+
+    def test_every_workflow_parses_and_names_are_unique(self):
+        self.assertEqual(len(self.every_name), len(set(self.every_name)))
+        self.assertIn(gate.GATE_CHECK_NAME, self.every_name)
+
+    def test_gate_covers_the_ruleset_checks_but_not_itself(self):
+        self.assertTrue(RULESET_REQUIRED <= set(self.expected))
+        self.assertNotIn(gate.GATE_CHECK_NAME, self.expected)
+
+    def test_matrix_jobs_expand_to_github_check_names(self):
+        for name in ("parity (3.12)", "parity (3.13)", "audio (3.12)",
+                     "audio-unit-http (3.13)", "unit (3.12)"):
+            with self.subTest(name=name):
+                self.assertIn(name, self.expected)
+        self.assertNotIn("parity", self.expected)
+
+    def test_live_infrastructure_checks_are_gated(self):
+        for name in ("postgres", "jetstream", "live", "dashboard-postgres",
+                     "postgres-review", "private-docker", "docker-build"):
+            with self.subTest(name=name):
+                self.assertIn(name, self.expected)
+
+    def test_path_filtered_workflows_are_not_always_required(self):
+        for name in ("receipt-cost", "guard", "nats-start-verify"):
+            with self.subTest(name=name):
+                self.assertIn(name, self.every_name)
+                self.assertNotIn(name, self.expected)
+
+    def test_gate_workflow_has_read_only_checks_permission(self):
+        source = (WORKFLOWS / "required-ci-gate.yml").read_text(encoding="utf-8")
+        self.assertIn("checks: read", source)
+        self.assertNotIn("write", source)
+        self.assertIn("github.event.pull_request.head.sha", source)
+        self.assertRegex(source, r"(?m)^  pull_request:\s*$")
+
+    def test_all_actions_are_pinned_to_commit_shas(self):
+        for path in sorted(WORKFLOWS.glob("*.yml")):
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if "uses:" in line:
+                    with self.subTest(file=path.name, line=line.strip()):
+                        self.assertRegex(line, r"uses: [\w.-]+/[\w.-]+@[0-9a-f]{40}\b")
+
+    def test_every_workflow_declares_top_level_permissions(self):
+        for path in sorted(WORKFLOWS.glob("*.yml")):
+            with self.subTest(file=path.name):
+                self.assertRegex(path.read_text(encoding="utf-8"),
+                                 r"(?m)^permissions:\s*$")
+
+
+class ParserTests(unittest.TestCase):
+    def collect(self, files):
+        with tempfile.TemporaryDirectory() as directory:
+            write_workflows(directory, {"gate.yml": GATE_WORKFLOW, **files})
+            return gate.collect_check_names(directory)
+
+    def test_filtered_and_unfiltered_triggers(self):
+        expected, every = self.collect({
+            "a.yml": """\
+                name: a
+                on:
+                  push:
+                    branches: [main]
+                  pull_request:
+                permissions:
+                  contents: read
+                jobs:
+                  alpha:
+                    runs-on: ubuntu-latest
+                    strategy:
+                      matrix:
+                        python: ['3.12', '3.13']
+                    steps:
+                      - run: |
+                          echo hi
+                          # not a key
+                  beta:
+                    runs-on: ubuntu-latest
+                """,
+            "b.yml": """\
+                name: b
+                on:
+                  pull_request:
+                    paths:
+                      - 'x/**'
+                  workflow_dispatch:
+                jobs:
+                  gamma:
+                    runs-on: ubuntu-latest
+                """,
+            "c.yml": """\
+                name: c
+                on:
+                  workflow_dispatch:
+                jobs:
+                  delta:
+                    runs-on: ubuntu-latest
+                """,
+        })
+        self.assertEqual(expected, ["alpha (3.12)", "alpha (3.13)", "beta"])
+        self.assertEqual(set(every),
+                         {"alpha (3.12)", "alpha (3.13)", "beta", "gamma",
+                          "delta", "ci-gate"})
+
+    def test_duplicate_names_fail_closed(self):
+        dup = """\
+            name: d
+            on:
+              pull_request:
+            jobs:
+              image:
+                runs-on: ubuntu-latest
+            """
+        with self.assertRaisesRegex(gate.WorkflowFormatError, "unique"):
+            self.collect({"d1.yml": dup, "d2.yml": dup})
+
+    def test_unsupported_layouts_fail_closed(self):
+        cases = {
+            "inline on": "name: x\non: [pull_request]\njobs:\n  a:\n    runs-on: u\n",
+            "job name": ("name: x\non:\n  pull_request:\njobs:\n  a:\n"
+                         "    name: Pretty\n    runs-on: u\n"),
+            "two axes": ("name: x\non:\n  pull_request:\njobs:\n  a:\n    strategy:\n"
+                         "      matrix:\n        python: ['3.12']\n        os: [a]\n"),
+            "matrix include": ("name: x\non:\n  pull_request:\njobs:\n  a:\n"
+                               "    strategy:\n      matrix:\n        include:\n"
+                               "          - python: '3.12'\n"),
+            "unknown pr key": ("name: x\non:\n  pull_request:\n    foo: bar\njobs:\n"
+                               "  a:\n    runs-on: u\n"),
+        }
+        for label, text in cases.items():
+            with self.subTest(case=label):
+                with self.assertRaises(gate.WorkflowFormatError):
+                    self.collect({"x.yml": text})
+
+    def test_missing_gate_job_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            write_workflows(directory, {"a.yml": "name: a\non:\n  pull_request:\n"
+                                                  "jobs:\n  a:\n    runs-on: u\n"})
+            with self.assertRaisesRegex(gate.WorkflowFormatError, "ci-gate"):
+                gate.collect_check_names(directory)
+
+
+class EvaluateTests(unittest.TestCase):
+    EXPECTED = ["a", "b (3.12)"]
+
+    def test_all_expected_success_passes(self):
+        state, names = gate.evaluate(self.EXPECTED, [run("a"), run("b (3.12)", run_id=2)])
+        self.assertEqual(state, "pass")
+        self.assertEqual(names, ["a", "b (3.12)"])
+
+    def test_missing_expected_is_pending_not_pass(self):
+        state, messages = gate.evaluate(self.EXPECTED, [run("a")])
+        self.assertEqual(state, "pending")
+        self.assertIn("missing: b (3.12)", messages)
+
+    def test_failed_expected_fails(self):
+        state, messages = gate.evaluate(
+            self.EXPECTED, [run("a", "failure"), run("b (3.12)", run_id=2)])
+        self.assertEqual(state, "fail")
+        self.assertEqual(messages, ["a: failure"])
+
+    def test_skipped_or_cancelled_is_not_success(self):
+        for conclusion in ("skipped", "cancelled", "neutral", "timed_out"):
+            with self.subTest(conclusion=conclusion):
+                state, _ = gate.evaluate(["a"], [run("a", conclusion)])
+                self.assertEqual(state, "fail")
+
+    def test_latest_rerun_attempt_wins(self):
+        runs = [run("a", "failure", run_id=1), run("a", "success", run_id=5),
+                run("b (3.12)", run_id=2)]
+        self.assertEqual(gate.evaluate(self.EXPECTED, runs)[0], "pass")
+        runs = [run("a", "success", run_id=1), run("a", "failure", run_id=5),
+                run("b (3.12)", run_id=2)]
+        self.assertEqual(gate.evaluate(self.EXPECTED, runs)[0], "fail")
+
+    def test_triggered_path_filtered_check_must_also_pass(self):
+        base = [run("a"), run("b (3.12)", run_id=2)]
+        self.assertEqual(
+            gate.evaluate(self.EXPECTED, base + [run("extra", status="in_progress",
+                                                     run_id=3)])[0], "pending")
+        self.assertEqual(
+            gate.evaluate(self.EXPECTED, base + [run("extra", "failure", run_id=3)])[0],
+            "fail")
+
+    def test_other_apps_and_the_gate_itself_are_ignored(self):
+        runs = [run("a"), run("b (3.12)", run_id=2),
+                run("a", "failure", run_id=9, app_id=999),
+                run(gate.GATE_CHECK_NAME, status="in_progress", run_id=10)]
+        self.assertEqual(gate.evaluate(self.EXPECTED, runs)[0], "pass")
+
+    def test_same_name_from_other_app_cannot_satisfy_expected(self):
+        state, _ = gate.evaluate(["a"], [run("a", app_id=999)])
+        self.assertEqual(state, "pending")
+
+
+class FakeClock:
+    def __init__(self):
+        self.now = 0.0
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
+class WaitTests(unittest.TestCase):
+    def wait(self, snapshots, **kwargs):
+        clock = FakeClock()
+        feed = iter(snapshots)
+        last = {"value": []}
+
+        def fetch():
+            try:
+                last["value"] = next(feed)
+            except StopIteration:
+                pass
+            value = last["value"]
+            if isinstance(value, Exception):
+                raise value
+            return value
+
+        options = {"deadline_s": 300, "interval_s": 10, "settle_s": 20}
+        options.update(kwargs)
+        return gate.wait_for_checks(["a"], fetch, clock=clock, sleep=clock.sleep,
+                                    log=lambda _: None, **options)
+
+    def test_pass_requires_settle_period(self):
+        state, _ = self.wait([[], [run("a")]])
+        self.assertEqual(state, "pass")
+
+    def test_late_failure_during_settle_fails(self):
+        late = [run("a"), run("late", "failure", run_id=2)]
+        state, messages = self.wait([[run("a")], [run("a")], late])
+        self.assertEqual(state, "fail")
+        self.assertEqual(messages, ["late: failure"])
+
+    def test_missing_check_fails_at_deadline(self):
+        state, messages = self.wait([[]], deadline_s=60)
+        self.assertEqual(state, "fail")
+        self.assertEqual(messages[0], "deadline reached")
+        self.assertIn("missing: a", messages)
+
+    def test_api_errors_are_retried_then_fail_closed(self):
+        state, _ = self.wait([gate.urllib.error.URLError("down"), [run("a")]])
+        self.assertEqual(state, "pass")
+        state, messages = self.wait([gate.urllib.error.URLError("down")],
+                                    deadline_s=30)
+        self.assertEqual(state, "fail")
+        self.assertTrue(any("API error" in m for m in messages))
+
+
+class MainTests(unittest.TestCase):
+    def test_list_mode_makes_no_api_calls(self):
+        with patch.object(gate, "fetch_check_runs",
+                          side_effect=AssertionError("no API in --list")), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(gate.main(["--workflows", str(WORKFLOWS), "--list"]), 0)
+        self.assertIn("test", out.getvalue().split())
+
+    def test_missing_environment_fails_closed(self):
+        with patch.dict("os.environ", {}, clear=True), \
+                contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(gate.main(["--workflows", str(WORKFLOWS)]), 1)
+        self.assertIn("required", err.getvalue())
+
+    def test_pass_and_fail_exit_codes(self):
+        expected, _ = gate.collect_check_names(WORKFLOWS)
+        green = [run(name, run_id=i) for i, name in enumerate(expected, 1)]
+        env = {"GITHUB_TOKEN": "t", "GITHUB_REPOSITORY": "o/r", "GATE_SHA": "abc"}
+        args = ["--workflows", str(WORKFLOWS), "--settle", "0", "--interval", "0"]
+        with patch.dict("os.environ", env, clear=True), \
+                patch.object(gate, "fetch_check_runs", return_value=green), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(gate.main(args), 0)
+        red = green[:-1] + [run(expected[-1], "failure", run_id=999)]
+        with patch.dict("os.environ", env, clear=True), \
+                patch.object(gate, "fetch_check_runs", return_value=red), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(gate.main(args), 1)
+        self.assertIn("failure", err.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main()

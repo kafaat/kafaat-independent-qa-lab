@@ -15,6 +15,7 @@ REQUIRED = {
     "operator-ui": ".github/workflows/operator-compose.yml",
     "root-stack": ".github/workflows/root-stack.yml",
     "http-stack": ".github/workflows/http-acceptance.yml",
+    "ci-gate": ".github/workflows/required-ci-gate.yml",
 }
 GITHUB_ACTIONS_APP_ID = 15368  # Verified from PR #44 check runs.
 

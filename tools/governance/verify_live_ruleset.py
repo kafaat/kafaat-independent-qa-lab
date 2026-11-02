@@ -81,7 +81,8 @@ def main(argv=None):
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)
         return 1
-    print("PASS: live Ruleset requires the four CI checks and no human approval.")
+    print("PASS: live Ruleset requires ci-gate plus the four named CI checks "
+          "and no human approval.")
     return 0
 
 

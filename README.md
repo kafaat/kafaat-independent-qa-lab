@@ -57,13 +57,28 @@ set approvals to 0, disable last-push approval, stale-review dismissal,
 mandatory conversation resolution and the extra approval for unattributed
 Copilot pull requests (`require_extra_approval_for_unattributed_changes`, previously
 enabled live; it only adds an approval when the count is above zero),
-and retain the four strict CI checks, pull-request requirement, no bypass, and
+and retain the strict required checks (`test`, `operator-ui`, `root-stack`,
+`http-stack`, `ci-gate`), pull-request requirement, no bypass, and
 deletion/force-push protection.
 The rule may then be renamed "QA Lab main — required CI, optional human review".
 Do not import a second overlapping Ruleset; an admin may instead `PUT` the
 canonical policy onto the existing ID 26292547. Confirm the effective
 parameters with the read-only `python tools/governance/verify_live_ruleset.py`
 using an admin-authenticated GitHub CLI.
+
+### Single CI gate (`ci-gate`)
+
+With human review optional, CI is the only merge gate. The `ci-gate` job
+([workflow](.github/workflows/required-ci-gate.yml),
+[script](tools/ci/required_checks_gate.py)) derives the expected check names
+from the workflow files and requires **every** job of every workflow that runs
+on all pull requests (35 checks when added, including the live PostgreSQL and
+NATS acceptance jobs) to succeed on the PR head, plus any path-filtered check
+that was triggered. Missing checks fail closed at a 40-minute deadline; after
+re-running a failed job, re-run `ci-gate` too. Job names are unique across
+workflows and every action is pinned to a commit SHA. Preview the list offline
+with `python tools/ci/required_checks_gate.py --list`. The Ruleset must list
+`ci-gate` as a required check (owner action in Settings).
 
 [Canonical JSON policy](docs/governance/main-ruleset.json),
 [legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),

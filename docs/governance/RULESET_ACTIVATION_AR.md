@@ -28,6 +28,24 @@
 
 بعد أي تعديل لاحق في Settings يجب تشغيل أداة التحقق من جديد وتسجيل النتيجة. الخطوات أدناه مرجع لإعادة الضبط إن تغيّرت القاعدة.
 
+## بوابة CI الموحدة ci-gate (2 نوفمبر 2026)
+
+بعد إلغاء المراجعة البشرية صار CI البوابة الوحيدة، لكن القاعدة كانت تفرض 4 فحوص فقط من أصل 35 فحصًا تعمل على كل PR. فحوص PostgreSQL وNATS الحية وغيرها كانت تعمل دون أن تمنع الدمج. فحص سجل 30 PR و1012 تشغيلًا لم يُظهر أي فشل عدا الاختبارين السلبيين المقصودين في #49 و#52، فلا توجد فحوص متذبذبة تمنع التوسيع.
+
+- `.github/workflows/required-ci-gate.yml` يضيف وظيفة واحدة اسمها **ci-gate** تعمل على كل PR بصلاحية `checks: read` فقط.
+- `tools/ci/required_checks_gate.py` (مكتبة Python القياسية فقط) يستخرج أسماء الفحوص من ملفات workflows نفسها: كل وظيفة في workflow يعمل على **كل** PR (دون paths أو branches أو types) يجب أن يظهر لها فحص من GitHub Actions بنتيجة success على رأس الـ PR، مع توسيع matrix إلى أسماء GitHub مثل `parity (3.12)`. الغياب حتى المهلة (40 دقيقة) فشل.
+- أي فحص آخر من GitHub Actions يظهر على الالتزام نفسه، مثل workflow مقيّد بمسارات وتفعّل، يجب أن ينجح أيضًا.
+- عند إعادة تشغيل وظيفة تُحتسب آخر محاولة فقط؛ وبعدها يجب إعادة تشغيل ci-gate نفسها لأن GitHub لا يعيد تشغيلها تلقائيًا.
+- أسماء الوظائف صارت فريدة عبر كل الملفات (أُعيدت تسمية unit-http وpipeline وimage وverify وregression المكررة) حتى لا يحجب فحص ناجح فحصًا فاشلًا بالاسم نفسه. المحلل يرفض أي تكرار أو صيغة لا يفهمها (fail-closed).
+- كل `uses:` مثبتة على SHA الالتزام الذي تشير إليه الوسوم الحالية v4/v5 دون تغيير السلوك، وكل workflow يعلن `permissions` على المستوى الأعلى.
+- `python tools/ci/required_checks_gate.py --list` يطبع القائمة المطلوبة دون أي اتصال بالشبكة.
+
+حدود معروفة: الـ PR يستطيع تعديل ملفات workflows والبوابة نفسها، كما يستطيع تعديل أي اختبار؛ هذا قائم أصلًا بغياب المراجعة البشرية ولا تعالجه البوابة.
+
+### الإضافة في Settings — خطوة يقوم بها المسؤول
+
+السياسة المعتمدة تطلب الآن خمسة فحوص: الأربعة السابقة و**ci-gate**. في صفحة القاعدة 26292547 ← Require status checks to pass ← Show additional settings ← Add checks، ابحث عن `ci-gate` واختر مصدر GitHub Actions، ثم Save changes. لا تحذف الفحوص الأربعة. بعد الحفظ شغّل أداة التحقق؛ قبل الإضافة تعطي FAIL مقصودًا لأن القاعدة الحية لا تطابق السياسة.
+
 ## الملفات الرسمية
 
 - docs/governance/main-ruleset.json: السياسة المعتمدة دون موافقة بشرية إلزامية.
@@ -42,10 +60,10 @@
 3. افتح Show additional settings أسفل Require a pull request before merging.
 4. اضبط Required approvals على **0**.
 5. ألغِ Dismiss stale pull request approvals وRequire approval of the most recent reviewable push وRequire conversation resolution before merging، وألغِ "Require an additional approval for unattributed Copilot pull requests"؛ لا تُلزم Code Owners أو فرق المراجعة.
-6. اترك Require a pull request before merging مفعّلًا، واترك Required status checks والـstrict/up-to-date مفعّلين، مع الفحوص الأربعة ومصدر GitHub Actions.
+6. اترك Require a pull request before merging مفعّلًا، واترك Required status checks والـstrict/up-to-date مفعّلين، مع الفحوص الخمسة test وoperator-ui وroot-stack وhttp-stack وci-gate ومصدر GitHub Actions.
 7. اترك Restrict deletions وBlock force pushes مفعّلين، ولا تضف أي bypass actors.
 8. اضغط Save changes وأكمل تأكيد الهوية إذا طلبه GitHub.
-9. تحقّق بقراءة إدارية فقط: `python tools/governance/verify_live_ruleset.py`. تقرأ الأداة القاعدة 26292547 وفرع main بطلبات GET فقط، ويفشل إذا بقيت أي بوابة موافقة مفعّلة (بما فيها خيار Copilot)، أو غاب bypass_actors من الرد، أو ضعفت الفحوص الأربعة، أو لم يكن main محميًا. سجّل المخرجات ووقتها في القضية #46.
+9. تحقّق بقراءة إدارية فقط: `python tools/governance/verify_live_ruleset.py`. تقرأ الأداة القاعدة 26292547 وفرع main بطلبات GET فقط، ويفشل إذا بقيت أي بوابة موافقة مفعّلة (بما فيها خيار Copilot)، أو غاب bypass_actors من الرد، أو نقص أي من الفحوص الخمسة أو ضعفت، أو لم يكن main محميًا. سجّل المخرجات ووقتها في القضية #46.
 
 ### بديل عبر GitHub CLI لتعديل القاعدة نفسها
 
@@ -75,7 +93,7 @@ python tools/governance/activate_ruleset.py --policy main
 
 ## اختبار قبول قواعد الحماية
 
-على PR اصطناعي منفصل وغير إنتاجي، اختبر منع الدمج عند فشل أحد الفحوص الأربعة أو غيابه، مع تأكيد النجاح عند استيفائها دون مطالبة بموافقة بشرية. وثّق نتيجة GitHub الفعلية؛ مجرد اختبار وحدة للقالب لا يثبت فرض القاعدة. لا تدمج PR التجريبي ولا تشغّل workflows يدويًا دون تفويض منفصل.
+على PR اصطناعي منفصل وغير إنتاجي، اختبر منع الدمج عند فشل أحد الفحوص الإلزامية أو غيابه، ومنها فحص غير مسمّى في القاعدة تغطيه ci-gate، مع تأكيد النجاح عند استيفائها دون مطالبة بموافقة بشرية. وثّق نتيجة GitHub الفعلية؛ مجرد اختبار وحدة للقالب لا يثبت فرض القاعدة. لا تدمج PR التجريبي ولا تشغّل workflows يدويًا دون تفويض منفصل.
 
 ## حدود القرار
 

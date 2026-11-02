@@ -5,7 +5,7 @@ on:
 permissions:
   contents: read
 jobs:
-  unit-http:
+  rejection-probe-unit-http:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
@@ -28,7 +28,7 @@ jobs:
           if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 27:
               raise SystemExit('Incomplete rejection probe unit validation')
           PY
-  pipeline:
+  rejection-probe-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     services:
