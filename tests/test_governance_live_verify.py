@@ -91,7 +91,7 @@ class LiveRulesetVerificationTests(unittest.TestCase):
                       if r["type"] == "required_status_checks")
         checks["do_not_enforce_on_create"] = True
         failures = verify_live_ruleset.check_live_state(ruleset, self.PROTECTED)
-        self.assertTrue(any("four GitHub Actions" in f for f in failures))
+        self.assertTrue(any("required GitHub Actions" in f for f in failures))
 
     def test_unprotected_main_fails(self):
         failures = verify_live_ruleset.check_live_state(

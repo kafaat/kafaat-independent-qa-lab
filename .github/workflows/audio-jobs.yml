@@ -5,7 +5,7 @@ on:
 permissions:
   contents: read
 jobs:
-  unit-http:
+  audio-unit-http:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -28,7 +28,7 @@ jobs:
           if not result.wasSuccessful() or result.skipped or errors or result.testsRun != 43:
               raise SystemExit('Incomplete bounded audio job validation')
           PY
-  pipeline:
+  audio-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:

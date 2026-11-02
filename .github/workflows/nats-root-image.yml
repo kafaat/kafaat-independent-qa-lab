@@ -6,10 +6,10 @@ on:
 permissions:
   contents: read
 jobs:
-  image:
+  nats-root-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build from repository root
         run: docker build -f Dockerfile.nats -t qa-nats:ci .
       - name: Verify image entrypoint and command

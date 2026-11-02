@@ -127,7 +127,7 @@ class RulesetActivationTests(unittest.TestCase):
         checks = next(r["parameters"] for r in policy["rules"]
                       if r["type"] == "required_status_checks")
         checks["do_not_enforce_on_create"] = True
-        with self.assertRaisesRegex(ValueError, "four GitHub Actions"):
+        with self.assertRaisesRegex(ValueError, "required GitHub Actions"):
             activate_ruleset.validate_policy(policy)
 
     def test_duplicate_pull_request_rules_cannot_hide_approval_gate(self):
@@ -188,7 +188,7 @@ class RulesetActivationTests(unittest.TestCase):
         checks = next(r["parameters"] for r in policy["rules"] if r["type"] == "required_status_checks")
         checks["required_status_checks"].pop()
         with patch("pathlib.Path.read_text", return_value=json.dumps(policy)):
-            with self.assertRaisesRegex(ValueError, "four GitHub Actions"):
+            with self.assertRaisesRegex(ValueError, "required GitHub Actions"):
                 activate_ruleset.load_policy("main")
 
     def test_api_pins_github_host_even_with_enterprise_environment(self):
