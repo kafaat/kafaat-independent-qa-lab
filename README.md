@@ -94,3 +94,21 @@ keeps historical review decisions without manufacturing human sign-off.
 **This does not authorize public or production deployment.** Security controls
 for internet exposure, multi-user identity/RBAC, backup/restore, and an
 authorized release decision remain separate.
+
+## Branch cleanup
+
+Merged work is preserved in each pull request (`refs/pull/<n>/head`), so its
+branch can be deleted and later restored from the pull request page. The
+manual **Merged branch cleanup** workflow
+([workflow](.github/workflows/branch-cleanup.yml),
+[script](tools/ci/merged_branch_cleanup.py)) lists, and with the `apply` box
+ticked deletes, only branches that are not `main`/default/protected, have no
+open pull request, and whose current head equals the head of a closed pull
+request. It is a dry run by default. Enable *Settings → General → Automatically
+delete head branches* to keep new merges tidy.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE); see [NOTICE](NOTICE).
+Third-party tools downloaded at run time keep their own licenses, and the
+imported legacy `unified-local-lab` source is not part of this repository.
