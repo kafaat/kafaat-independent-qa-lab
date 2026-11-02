@@ -1,0 +1,27 @@
+name: Merged branch cleanup
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Delete the eligible branches (unchecked = dry run that only lists them)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  branch-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Delete branches already preserved in a closed pull request
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLEANUP_APPLY: ${{ inputs.apply }}
+        run: python -I -u tools/ci/merged_branch_cleanup.py

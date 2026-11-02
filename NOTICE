@@ -1,0 +1,10 @@
+Kafaat Independent QA Lab
+Copyright 2026 Kafaat
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party tools that the experiments and workflows download at run time
+(for example pbakaus/impeccable and morluto/rea) are not part of this
+repository and remain under their own licenses. The imported legacy
+"unified-local-lab" source is not included in this repository and is not
+covered by this license.
