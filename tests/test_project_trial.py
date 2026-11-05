@@ -12,7 +12,8 @@ import unittest
 import json
 
 from qa_lab.project_trial import (TrialRejected, capture, canonical, docker_argv,
-                                  execute, load_binding, validate_binding, verify, _read_tracked_nofollow)
+                                  execute, execute_with_output, load_binding, validate_binding,
+                                  verify, _read_tracked_nofollow)
 
 IMAGE = "python:3.12-slim-bookworm@sha256:" + "9" * 64
 
@@ -304,6 +305,113 @@ class SourceTrials(unittest.TestCase):
         r = verify(receipt, self.b, b"z" * 32,
                    expected_manifest_sha256=self.manifest["manifest_sha256"], expected_image=IMAGE, minimum_tests=2)
         self.assertIn("SIGNATURE_MISMATCH", r["reasons"])
+
+    def negative_receipt(self, output=None, **changes):
+        # Signed protocol fixtures, not evidence of an executed failing project.
+        if output is None:
+            output = (b'.F\n======================================================================\n'
+                      b'FAIL: test_b (test_example.Sample.test_b)\n'
+                      b'----------------------------------------------------------------------\n'
+                      b'Traceback (most recent call last):\n'
+                      b'AssertionError: intentional negative control\n\n'
+                      b'----------------------------------------------------------------------\n'
+                      b'Ran 2 tests in 0.001s\n\nFAILED (failures=1)\n')
+        receipt = self.signed()
+        receipt['payload'].update(result='FAILED', exit_code=1,
+                                  output_sha256=hashlib.sha256(output).hexdigest())
+        receipt['payload'].update(changes)
+        receipt['signature']['value'] = hmac.new(
+            self.key, canonical(receipt['payload']), hashlib.sha256).hexdigest()
+        return receipt, output
+
+    def checked_negative(self, receipt, output, **overrides):
+        options = dict(expected_result='FAILED', observed_output=output,
+                       expected_failure_ids=['test_example.Sample.test_b'])
+        options.update(overrides)
+        return self.checked(receipt, **options)
+
+    def test_negative_control_matches_expectation_without_accepting_failure(self):
+        receipt, output = self.negative_receipt()
+        result = self.checked_negative(receipt, output)
+        self.assertEqual(result['status'], 'MATCHED')
+        self.assertEqual(result['purpose'], 'negative-control')
+        self.assertEqual(result['expected_status'], 'FAILED')
+        self.assertEqual(result['observed_status'], 'FAILED')
+        self.assertFalse(result['project_accepted'])
+        self.assertFalse(result['hospital_admission'])
+        self.assertFalse(result['production_accepted'])
+
+    def test_default_verifier_still_rejects_a_signed_failure(self):
+        receipt, _ = self.negative_receipt()
+        self.assertIn('INCOMPLETE_TEST_EVIDENCE', self.checked(receipt)['reasons'])
+
+    def test_negative_control_requires_bound_output_and_explicit_failure_ids(self):
+        receipt, output = self.negative_receipt()
+        for options in ({'observed_output': None}, {'expected_failure_ids': None},
+                        {'expected_failure_ids': []}, {'expected_failure_ids': ['not-a-test-id']}):
+            with self.subTest(options=options):
+                self.assertEqual(self.checked_negative(receipt, output, **options)['status'], 'REJECTED')
+
+    def test_negative_control_rejects_tampered_diagnostic_output(self):
+        receipt, output = self.negative_receipt()
+        self.assertIn('NEGATIVE_CONTROL_NOT_ESTABLISHED',
+                      self.checked_negative(receipt, output + b'changed')['reasons'])
+
+    def test_negative_control_rejects_import_collection_and_runtime_errors(self):
+        _, output = self.negative_receipt()
+        for altered in (output.replace(b'FAIL:', b'ERROR:').replace(b'failures=1', b'errors=1'),
+                        output.replace(b'AssertionError:', b'ImportError:'),
+                        output.replace(b'AssertionError:', b'NameError:')):
+            with self.subTest(output=altered):
+                receipt, altered = self.negative_receipt(altered)
+                self.assertEqual(self.checked_negative(receipt, altered)['status'], 'REJECTED')
+
+    def test_negative_control_rejects_wrong_failure_identity(self):
+        receipt, output = self.negative_receipt()
+        self.assertEqual(self.checked_negative(receipt, output, expected_failure_ids=[
+            'test_example.Sample.test_a'])['status'], 'REJECTED')
+
+    def test_negative_control_requires_exact_catalog_count(self):
+        _, output = self.negative_receipt()
+        for count in (0, 1, 3):
+            altered = output.replace(b'Ran 2 tests', f'Ran {count} tests'.encode())
+            receipt, altered = self.negative_receipt(altered, tests_observed=count)
+            self.assertEqual(self.checked_negative(receipt, altered)['status'], 'REJECTED')
+
+    def test_negative_control_rejects_timeout_signal_and_docker_exit(self):
+        for changes in ({'exit_code': -1, 'result': 'TIMED_OUT'}, {'exit_code': 125},
+                        {'exit_code': -9}, {'exit_code': 0}, {'skipped_detected': True}):
+            with self.subTest(changes=changes):
+                receipt, output = self.negative_receipt(**changes)
+                self.assertEqual(self.checked_negative(receipt, output)['status'], 'REJECTED')
+
+    def test_negative_control_rejects_extra_summary_or_unexpected_success(self):
+        _, output = self.negative_receipt()
+        for altered in (output + b'Ran 2 tests in 0.001s\n', output + b'OK\n'):
+            receipt, altered = self.negative_receipt(altered)
+            self.assertEqual(self.checked_negative(receipt, altered)['status'], 'REJECTED')
+
+    def test_negative_control_rejects_missing_receipt_field_even_when_resigned(self):
+        receipt, output = self.negative_receipt()
+        del receipt['payload']['source_manifest']
+        receipt['signature']['value'] = hmac.new(
+            self.key, canonical(receipt['payload']), hashlib.sha256).hexdigest()
+        self.assertIn('UNEXPECTED_RECEIPT_FIELDS', self.checked_negative(receipt, output)['reasons'])
+
+    def test_unknown_expected_result_is_rejected(self):
+        self.assertIn('INVALID_EXPECTED_RESULT',
+                      self.checked(self.signed(), expected_result='anything')['reasons'])
+
+    def test_diagnostic_api_returns_exact_receipt_bound_bytes_from_one_launch(self):
+        # Subprocess contract unit test only. The Docker integration is a CI job.
+        output = b'Ran 2 tests in 0.001s\n\nOK\n'
+        fake = [sys.executable, '-c', f'import sys; sys.stdout.buffer.write({output!r})']
+        with patch('qa_lab.project_trial.docker_argv', return_value=fake) as command:
+            receipt, captured = execute_with_output(self.root, self.b, IMAGE, self.key)
+        self.assertEqual(command.call_count, 1)
+        self.assertEqual(captured, output)
+        self.assertEqual(receipt['payload']['output_sha256'], hashlib.sha256(captured).hexdigest())
+        self.assertEqual(self.checked(receipt)['status'], 'MATCHED')
 
 
 if __name__ == "__main__":
