@@ -227,6 +227,17 @@ def docker_argv(image: str, source_dir: Path, name: str) -> list[str]:
 def execute(repo: str | Path, binding: dict, image: str, key: bytes,
             *, timeout: int = 90) -> dict:
     """Run reviewed source inside Docker. Exits never grant Hospital authority."""
+    return execute_with_output(repo, binding, image, key, timeout=timeout)[0]
+
+
+def execute_with_output(repo: str | Path, binding: dict, image: str, key: bytes,
+                        *, timeout: int = 90) -> tuple[dict, bytes]:
+    """Use the same executor and also return its bounded, receipt-bound output.
+
+    This opt-in diagnostic API keeps the existing receipt schema and ``execute``
+    result unchanged. Output is untrusted test data; callers choose where to keep
+    it outside measured source. No second execution or test runner is introduced.
+    """
     b = validate_binding(binding)
     if type(key) is not bytes or len(key) < 32:
         raise TrialRejected("INVALID_SIGNING_KEY")
@@ -318,7 +329,7 @@ def execute(repo: str | Path, binding: dict, image: str, key: bytes,
                "source_attested_independently": False,
                "production_accepted": False, "authority": "execution-evidence-only"}
     signature = hmac.new(key, canonical(payload), hashlib.sha256).hexdigest()
-    return {"payload": payload, "signature": {"algorithm": "hmac-sha256", "value": signature}}
+    return {"payload": payload, "signature": {"algorithm": "hmac-sha256", "value": signature}}, output
 
 
 def valid_source_manifest(value: object) -> bool:
@@ -355,10 +366,47 @@ def valid_source_manifest(value: object) -> bool:
     return total == value["total_bytes"]
 
 
+def _expected_assertion_failure(output: object, payload: dict,
+                                expected_failure_ids: object, expected_count: int) -> bool:
+    """Recognize a reviewed negative control, never a generic failing process.
+
+    Matching text is not proof against hostile tests. Only reviewed, source-bound
+    fixtures are supported, with unchanged test catalog verified by the caller.
+    """
+    if (type(output) is not bytes or len(output) > 1024 * 1024
+            or not isinstance(expected_failure_ids, (list, tuple)) or not expected_failure_ids
+            or len(expected_failure_ids) != len(set(expected_failure_ids))
+            or any(not isinstance(item, str) or not re.fullmatch(
+                r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*){2,}", item) for item in expected_failure_ids)
+            or hashlib.sha256(output).hexdigest() != payload["output_sha256"]):
+        return False
+    try:
+        text = output.decode("utf-8", "strict")
+    except UnicodeError:
+        return False
+    summaries = re.findall(r"(?m)^Ran ([0-9]+) tests? in [0-9]+(?:\.[0-9]+)?s\s*$", text)
+    final = re.findall(r"(?m)^FAILED \(failures=([0-9]+)\)\s*$", text)
+    headers = re.findall(r"(?m)^FAIL: ([A-Za-z_]\w*) \(([^()\r\n]+)\)\s*$", text)
+    ids = [identity if identity.endswith("." + name) else identity + "." + name
+           for name, identity in headers]
+    return (summaries == [str(expected_count)] and final == [str(len(expected_failure_ids))]
+            and sorted(ids) == sorted(expected_failure_ids)
+            and len(re.findall(r"(?m)^AssertionError(?:[:\s]|$)", text)) == len(expected_failure_ids)
+            and not re.search(r"(?m)^(?:ERROR:|OK\b)|errors=|skipped=", text))
+
+
 def verify(envelope: object, expected_binding: object, key: bytes, *,
            expected_manifest_sha256: str, expected_image: str,
-           minimum_tests: int) -> dict:
-    """Offline independent matching only; never imports a result into Hospital."""
+           minimum_tests: int, expected_result: str = "PASSED",
+           observed_output: bytes | None = None,
+           expected_failure_ids: list[str] | tuple[str, ...] | None = None) -> dict:
+    """Offline matching only; default success semantics are unchanged.
+
+    FAILED is an explicit negative-control expectation, requires exact test count
+    and receipt-bound assertion details, and never means the project is accepted.
+    Expectations and the identical baseline/candidate catalog must come from the
+    reviewer, not from the producer receipt or its output.
+    """
     errors = []
     try:
         binding = validate_binding(expected_binding)
@@ -408,17 +456,30 @@ def verify(envelope: object, expected_binding: object, key: bytes, *,
                 or not isinstance(payload.get("image"), str)
                 or not IMAGE.fullmatch(payload["image"])):
             raise TrialRejected("INVALID_EXECUTION_CLAIMS")
-        if (payload.get("result") != "PASSED" or type(payload.get("tests_observed")) is not int
+        if expected_result not in {"PASSED", "FAILED"}:
+            raise TrialRejected("INVALID_EXPECTED_RESULT")
+        if (payload.get("result") != expected_result or type(payload.get("tests_observed")) is not int
                 or payload["tests_observed"] < minimum_tests or type(payload.get("exit_code")) is not int
-                or payload["exit_code"] != 0 or payload.get("skipped_detected") is not False
+                or payload["exit_code"] != (0 if expected_result == "PASSED" else 1)
+                or payload.get("skipped_detected") is not False
                 or not isinstance(payload.get("output_sha256"), str)
                 or not DIGEST.fullmatch(payload["output_sha256"])):
             raise TrialRejected("INCOMPLETE_TEST_EVIDENCE")
+        if expected_result == "FAILED" and (
+                payload["tests_observed"] != minimum_tests or not _expected_assertion_failure(
+                    observed_output, payload, expected_failure_ids, minimum_tests)):
+            raise TrialRejected("NEGATIVE_CONTROL_NOT_ESTABLISHED")
     except (TrialRejected, TypeError, ValueError, OverflowError, KeyError) as exc:
         errors.append(str(exc) if isinstance(exc, TrialRejected) else "INVALID_EVIDENCE")
-    return {"format": "qa.project-trial-verification.v1", "status": "MATCHED" if not errors else "REJECTED",
-            "reasons": errors, "hospital_admission": False, "production_accepted": False,
-            "source_independently_attested": False}
+    report = {"format": "qa.project-trial-verification.v1", "status": "MATCHED" if not errors else "REJECTED",
+              "reasons": errors, "hospital_admission": False, "production_accepted": False,
+              "source_independently_attested": False}
+    if expected_result == "FAILED":
+        value = envelope.get("payload") if isinstance(envelope, dict) else None
+        report.update(purpose="negative-control", expected_status="FAILED",
+                      observed_status=value.get("result") if isinstance(value, dict) else None,
+                      project_accepted=False)
+    return report
 
 
 def load_binding(path: str | Path) -> dict:

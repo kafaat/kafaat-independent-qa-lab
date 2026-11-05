@@ -67,3 +67,71 @@ jobs:
                   'source_sha':sha,'manifest_sha256':manifest['manifest_sha256'],
                   'source_attested_independently':False,'production_accepted':False}))
           PY
+  baseline-negative-control:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Observe the same tests fail for the intended assertion and pass after correction
+        run: |
+          python -B - <<'PY'
+          import hashlib, json, os, pathlib, subprocess, tempfile
+          from qa_lab.project_trial import capture, execute_with_output, verify
+          def git(root, *args):
+              return subprocess.check_output(['git', '-C', str(root), *args], stderr=subprocess.DEVNULL).decode().strip()
+          with tempfile.TemporaryDirectory() as tmp:
+              baseline = pathlib.Path(tmp) / 'baseline'
+              baseline.mkdir()
+              (baseline / 'tests').mkdir()
+              code = 'def total(a, b):\n    return a + b + 1\n'
+              tests = ('import unittest\nfrom calculation import total\nclass Suite(unittest.TestCase):\n'
+                       '    def test_total(self): self.assertEqual(total(2, 2), 4)\n'
+                       '    def test_commutative(self): self.assertEqual(total(2, 3), total(3, 2))\n')
+              (baseline / 'calculation.py').write_text(code)
+              (baseline / 'tests/test_calculation.py').write_text(tests)
+              git(baseline, 'init', '-q')
+              git(baseline, 'add', '.')
+              git(baseline, '-c', 'user.name=Reviewed Fixture', '-c', 'user.email=ci@invalid.example',
+                  '-c', 'commit.gpgsign=false', 'commit', '-qm', 'intentional arithmetic defect')
+              candidate = pathlib.Path(tmp) / 'candidate'
+              subprocess.run(['git', 'clone', '--no-hardlinks', str(baseline), str(candidate)], check=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              (candidate / 'calculation.py').write_text(code.replace(' + 1', ''))
+              git(candidate, 'add', 'calculation.py')
+              git(candidate, '-c', 'user.name=Reviewed Fixture', '-c', 'user.email=ci@invalid.example',
+                  '-c', 'commit.gpgsign=false', 'commit', '-qm', 'correct the intended arithmetic defect')
+              assert git(candidate, 'diff', '--name-only', 'HEAD~1', 'HEAD') == 'calculation.py'
+              assert (baseline / 'tests/test_calculation.py').read_bytes() == (candidate / 'tests/test_calculation.py').read_bytes()
+              criteria = hashlib.sha256(tests.encode()).hexdigest()
+              subprocess.run(['docker', 'pull', 'python:3.12-slim-bookworm'], check=True,
+                             stdout=subprocess.DEVNULL)
+              image = subprocess.check_output(['docker', 'image', 'inspect', '--format',
+                  '{{index .RepoDigests 0}}', 'python:3.12-slim-bookworm'], text=True).strip()
+              key = os.urandom(32)
+              reports = {}
+              for role, repo, expected in [('baseline', baseline, 'FAILED'), ('candidate', candidate, 'PASSED')]:
+                  sha = git(repo, 'rev-parse', 'HEAD')
+                  binding = {'tenant_id': 'ci', 'project_id': 'negative-control', 'case_id': 'arithmetic',
+                             'cycle_no': 1, 'snapshot_id': role, 'attempt_no': 1,
+                             'criteria_digest': criteria, 'source_sha': sha}
+                  manifest, _ = capture(repo, sha)
+                  receipt, output = execute_with_output(repo, binding, image, key, timeout=75)
+                  options = {'expected_result': 'FAILED', 'observed_output': output,
+                             'expected_failure_ids': ['test_calculation.Suite.test_total']} if role == 'baseline' else {}
+                  report = verify(receipt, binding, key, expected_manifest_sha256=manifest['manifest_sha256'],
+                                  expected_image=image, minimum_tests=2, **options)
+                  assert report['status'] == 'MATCHED', report
+                  assert receipt['payload']['tests_observed'] == 2
+                  assert receipt['payload']['result'] == expected
+                  assert report['hospital_admission'] is False and report['production_accepted'] is False
+                  reports[role] = {'source_sha': sha, 'manifest_sha256': manifest['manifest_sha256'],
+                                   'observed_status': receipt['payload']['result'], 'verification': report}
+              print(json.dumps({'format': 'qa.synthetic-negative-control.v1', 'reports': reports,
+                                'same_test_catalog': True, 'catalog_sha256': criteria,
+                                'fixture_kind': 'SYNTHETIC_SOURCE', 'production_accepted': False}))
+          PY
