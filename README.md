@@ -82,6 +82,26 @@ with `python tools/ci/required_checks_gate.py --list`. The Ruleset must list
 the read-only verifier reported PASS, and disposable PR #54 (closed unmerged)
 was blocked when only the non-named `boundary` check failed.
 
+**The gate runs from the base branch.** `ci-gate` runs on `pull_request_target`,
+so its workflow and script come from `main`, not from the pull request being
+judged. The PR head's `.github/workflows` and `tools/ci` are fetched as data
+and parsed, never executed, with no credentials persisted. A PR therefore
+cannot weaken its own gate, and any weakening it proposes must be explicit:
+
+- if the base requires a check on every pull request and the PR head no longer
+  does (a job removed or renamed, a workflow deleted or path-filtered), the
+  gate fails unless the PR description has its own line
+  `ci-gate-drop: <name>[, <name>...]`;
+- if the PR changes the gate itself (`required-ci-gate.yml` or
+  `tools/ci/required_checks_gate.py`), the gate fails unless the description
+  has the line `ci-gate-change: acknowledged`. The change takes effect only
+  after merge.
+
+These lines are a visible record, not an approval. The plain `pull_request`
+trigger remains only so the PR introducing this can pass its own gate; a
+follow-up PR removes it once this is on `main`. Until then each PR also gets a
+second, PR-controlled `ci-gate` run.
+
 [Canonical JSON policy](docs/governance/main-ruleset.json),
 [legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),
 [activation/readback guide](docs/governance/RULESET_ACTIVATION_AR.md),
