@@ -94,7 +94,7 @@ class Lab:
             if claimed != 1: raise ValueError("run already claimed")
         project,sha,recipe,_=row
         try:
-            self._attest_checkout(workspace, sha)
+            sha_verified=self._attest_checkout(workspace, sha)
         except (ValueError, OSError) as exc:
             return self._finish_blocked_claim(rid, project, sha, recipe, str(exc))
         started=time.time()
@@ -111,7 +111,7 @@ class Lab:
         except (OSError, UnicodeError) as exc:
             status,code,stdout,stderr="BLOCKED",None,"",f"runner unavailable: {type(exc).__name__}"
             redaction=redaction_summary()
-        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"recipe":recipe,"status":status,"exit_code":code,"started_at":started,"finished_at":time.time(),"stdout_tail":stdout,"stderr_tail":stderr,"output_redaction":redaction,"workspace":str(workspace),"environment_claim":"local-unattested","authority":"execution-evidence-only"}
+        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"source_sha_verified":sha_verified,"recipe":recipe,"status":status,"exit_code":code,"started_at":started,"finished_at":time.time(),"stdout_tail":stdout,"stderr_tail":stderr,"output_redaction":redaction,"workspace":str(workspace),"environment_claim":"local-unattested","authority":"execution-evidence-only"}
         receipt["sha256"]=digest(receipt)
         with closing(self.connect()) as db, db:
             changed=db.execute("UPDATE runs SET status=?,receipt=? WHERE id=? AND status='RUNNING'",(status,canonical(receipt),rid)).rowcount
@@ -119,8 +119,14 @@ class Lab:
         return receipt
 
     def _attest_checkout(self, workspace, sha):
+        """Return True when the clean checkout was compared to sha, False when not checked.
+
+        Off by default outside Compose (QA_REQUIRE_GIT_SHA=1 there); the receipt's
+        source_sha_verified says which, so source_sha is never read as attested
+        when it was only requested.
+        """
         if os.environ.get("QA_REQUIRE_GIT_SHA", "0") != "1":
-            return
+            return False
         try:
             actual=subprocess.run(["git","rev-parse","HEAD"],cwd=workspace,capture_output=True,text=True,timeout=5,check=True).stdout.strip()
             dirty=subprocess.run(["git","status","--porcelain"],cwd=workspace,capture_output=True,text=True,timeout=5,check=True).stdout.strip()
@@ -128,9 +134,10 @@ class Lab:
             raise ValueError("unable to attest checkout") from exc
         if actual != sha or dirty:
             raise ValueError("checkout SHA mismatch or dirty tree")
+        return True
 
     def _finish_blocked_claim(self, rid, project, sha, recipe, reason):
-        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"recipe":recipe,"status":"BLOCKED","reason":reason[:500],"authority":"execution-evidence-only","environment_claim":"local-unattested"}
+        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"source_sha_verified":False,"recipe":recipe,"status":"BLOCKED","reason":reason[:500],"authority":"execution-evidence-only","environment_claim":"local-unattested"}
         receipt["sha256"]=digest(receipt)
         with closing(self.connect()) as db, db:
             changed=db.execute("UPDATE runs SET status='BLOCKED',receipt=? WHERE id=? AND status='RUNNING'",(canonical(receipt),rid)).rowcount
