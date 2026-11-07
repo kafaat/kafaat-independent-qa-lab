@@ -33,6 +33,17 @@ counts. The rules are a reduced port of unified-local-lab's `ull-redaction-2`
 ([qa_lab/redaction.py](qa_lab/redaction.py)). Redaction is heuristic: zero
 findings does not mean the output has no secrets (`completeness_claimed: false`).
 
+## Receipt attestations (DSSE)
+`python -m qa_lab.attestation export --data-dir D --run-id R --output F [--key ed25519.pem]`
+wraps a receipt in an in-toto Statement (test-result v0.1 predicate) inside a
+DSSE envelope; `verify --envelope F [--trust T]` checks it. The contract is
+shared with unified-local-lab (same types, PAE, envelope keys and
+`principal ed25519 <base64 SPKI>` trust lines; Ed25519 via `openssl` only).
+An unsigned envelope is UNSIGNED (consistency only); a valid signature by a key
+not in the verifier's trust file is UNTRUSTED; only a listed key is TRUSTED.
+No key is generated, stored or configured by the lab, and nothing here is a
+release or production approval.
+
 ## Mutation controls
 `python tools/mutation/verify_mutations.py` applies each mutation in
 [tools/mutation/controls.json](tools/mutation/controls.json) to a disposable copy
@@ -119,6 +130,13 @@ cannot weaken its own gate, and any weakening it proposes must be explicit:
   `tools/ci/required_checks_gate.py`), the gate fails unless the description
   has the line `ci-gate-change: acknowledged`. The change takes effect only
   after merge.
+
+A path-filtered workflow (only `paths`/`paths-ignore`) is also required when
+the PR's changed files trigger it, so one that never starts fails at the
+deadline instead of being ignored; other filters, unusual pattern syntax and
+diffs of 300+ files are reported as not evaluated. A failure in one check
+suite is not hidden by a newer success of the same check name in another
+suite on the same commit; only re-runs within a suite replace each other.
 
 These lines are a visible record, not an approval. There is no PR-controlled
 `ci-gate` run: the transitional `pull_request` trigger used by PR #59 was
