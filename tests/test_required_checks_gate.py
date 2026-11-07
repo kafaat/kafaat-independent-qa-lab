@@ -481,3 +481,127 @@ class GateWorkflowTrustTests(unittest.TestCase):
         self.assertIn("git archive refs/remotes/pr/head .github/workflows tools/ci", self.source)
         self.assertNotIn("$RUNNER_TEMP/pr-head/", self.source.replace(
             '"$RUNNER_TEMP/pr-head"', ""))
+
+
+def suite_run(name, conclusion="success", run_id=1, suite=1, status="completed"):
+    item = run(name, conclusion, status, run_id)
+    item["check_suite"] = {"id": suite}
+    return item
+
+
+class SuiteGroupingTests(unittest.TestCase):
+    def test_newer_success_in_another_suite_does_not_hide_a_failure(self):
+        runs = [suite_run("test", "failure", run_id=1, suite=10),
+                suite_run("test", "success", run_id=2, suite=20)]
+        state, messages = gate.evaluate(["test"], runs)
+        self.assertEqual(state, "fail")
+        self.assertEqual(messages, ["test: failure"])
+
+    def test_rerun_within_the_same_suite_still_wins(self):
+        runs = [suite_run("test", "failure", run_id=1, suite=10),
+                suite_run("test", "success", run_id=2, suite=10)]
+        self.assertEqual(gate.evaluate(["test"], runs)[0], "pass")
+
+    def test_running_attempt_in_any_suite_is_pending(self):
+        runs = [suite_run("test", "success", run_id=1, suite=10),
+                suite_run("test", None, run_id=2, suite=20, status="in_progress")]
+        self.assertEqual(gate.evaluate(["test"], runs)[0], "pending")
+
+
+PATHS_WORKFLOW = """\
+name: receipt
+on:
+  pull_request:
+    paths:
+      - 'qa_lab/receipt_cost.py'
+      - 'experiments/rea/**'
+      - '!experiments/rea/README.md'
+  workflow_dispatch:
+jobs:
+  receipt-cost:
+    runs-on: ubuntu-latest
+"""
+
+
+class PathFilterTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name)
+
+    def write(self, files):
+        write_workflows(self.dir, {"required-ci-gate.yml": GATE_WORKFLOW, **files})
+
+    def test_glob_semantics(self):
+        rx = gate.glob_regex
+        self.assertTrue(rx("tools/**").match("tools/a/b.py"))
+        self.assertTrue(rx("*.md").match("README.md"))
+        self.assertFalse(rx("*.md").match("docs/README.md"))
+        self.assertTrue(rx("a?c").match("abc"))
+        self.assertFalse(rx("qa_lab/api.py").match("qa_lab/api.pyc"))
+        for bad in ("src/[ab].py", "src/{a,b}.py"):
+            with self.assertRaises(ValueError):
+                rx(bad)
+
+    def test_paths_trigger_and_negation(self):
+        self.write({"receipt.yml": PATHS_WORKFLOW})
+        for changed, expected in ((["qa_lab/receipt_cost.py"], ["receipt-cost"]),
+                                  (["experiments/rea/x/y.js"], ["receipt-cost"]),
+                                  (["experiments/rea/README.md"], []),
+                                  (["qa_lab/core.py"], []),
+                                  ([], [])):
+            with self.subTest(changed=changed):
+                required, notices = gate.triggered_path_checks(self.dir, changed)
+                self.assertEqual((required, notices), (expected, []))
+
+    def test_paths_ignore(self):
+        ignore = PATHS_WORKFLOW.replace("    paths:\n", "    paths-ignore:\n")
+        self.write({"receipt.yml": ignore})
+        self.assertEqual(gate.triggered_path_checks(self.dir, ["qa_lab/receipt_cost.py"])[0], [])
+        self.assertEqual(gate.triggered_path_checks(
+            self.dir, ["qa_lab/receipt_cost.py", "qa_lab/core.py"])[0], ["receipt-cost"])
+
+    def test_other_filters_and_unsupported_syntax_are_not_evaluated(self):
+        branches = PATHS_WORKFLOW.replace("    paths:\n", "    branches: [main]\n    paths:\n")
+        braces = PATHS_WORKFLOW.replace("'experiments/rea/**'", "'src/{a,b}.py'")
+        self.write({"receipt.yml": branches})
+        self.assertEqual(gate.triggered_path_checks(self.dir, ["qa_lab/receipt_cost.py"]), ([], []))
+        self.write({"receipt.yml": braces})
+        required, notices = gate.triggered_path_checks(self.dir, ["qa_lab/receipt_cost.py"])
+        self.assertEqual(required, [])
+        self.assertIn("not evaluated", notices[0])
+
+    def test_large_diffs_are_not_evaluated(self):
+        self.write({"receipt.yml": PATHS_WORKFLOW})
+        files = ["qa_lab/receipt_cost.py"] + [f"f{i}" for i in range(299)]
+        required, notices = gate.triggered_path_checks(self.dir, files)
+        self.assertEqual(required, [])
+        self.assertIn("300 changed files", notices[0])
+
+    def test_repository_path_filters_all_parse(self):
+        required, notices = gate.triggered_path_checks(WORKFLOWS, ["qa_lab/receipt_cost.py"])
+        self.assertEqual(notices, [])
+        self.assertIn("receipt-cost", required)
+        required, _ = gate.triggered_path_checks(WORKFLOWS, ["qa_lab/api.py"])
+        self.assertIn("guard", required)
+
+    def test_main_requires_triggered_path_checks_in_head_tree_mode(self):
+        base = make_tree(self.dir / "base", {"tests.yml": TESTS_WORKFLOW, "receipt.yml": PATHS_WORKFLOW})
+        head = make_tree(self.dir / "head", {"tests.yml": TESTS_WORKFLOW, "receipt.yml": PATHS_WORKFLOW})
+        event = self.dir / "event.json"
+        event.write_text('{"pull_request": {"number": 7, "body": ""}}', encoding="utf-8")
+        seen = {}
+
+        def wait(expected, fetch, **kwargs):
+            seen["expected"] = expected
+            return "pass", expected
+
+        argv = ["--base-tree", str(base), "--head-tree", str(head), "--event-path", str(event),
+                "--sha", "abc", "--repository", "o/r"]
+        with patch.object(gate, "fetch_changed_files", return_value=["qa_lab/receipt_cost.py"]) as files, \
+                patch.object(gate, "wait_for_checks", side_effect=wait), \
+                patch.dict("os.environ", {"GITHUB_TOKEN": "t"}), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(gate.main(argv), 0)
+        files.assert_called_once_with("o/r", 7, "t")
+        self.assertEqual(seen["expected"], ["lint", "receipt-cost", "test"])

@@ -109,6 +109,13 @@ cannot weaken its own gate, and any weakening it proposes must be explicit:
   has the line `ci-gate-change: acknowledged`. The change takes effect only
   after merge.
 
+A path-filtered workflow (only `paths`/`paths-ignore`) is also required when
+the PR's changed files trigger it, so one that never starts fails at the
+deadline instead of being ignored; other filters, unusual pattern syntax and
+diffs of 300+ files are reported as not evaluated. A failure in one check
+suite is not hidden by a newer success of the same check name in another
+suite on the same commit; only re-runs within a suite replace each other.
+
 These lines are a visible record, not an approval. There is no PR-controlled
 `ci-gate` run: the transitional `pull_request` trigger used by PR #59 was
 removed once the gate was on `main`.
