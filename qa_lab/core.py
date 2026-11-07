@@ -10,6 +10,8 @@ import subprocess
 import time
 import uuid
 
+from .redaction import redact_tail, summary as redaction_summary
+
 class WorkspaceUnavailable(RuntimeError):
     """The worker's workspace is missing; raised before a claim, so the run stays PENDING."""
 
@@ -100,13 +102,16 @@ class Lab:
             proc=subprocess.run(RECIPES[recipe],cwd=workspace,capture_output=True,text=True,timeout=min(int(timeout),120),env={"PATH":os.environ.get("PATH","/usr/bin:/bin"),"PYTHONDONTWRITEBYTECODE":"1"})
             status="PASSED" if proc.returncode == 0 else "FAILED"
             code=proc.returncode
-            stdout=proc.stdout[-16000:]
-            stderr=proc.stderr[-16000:]
+            stdout,out_counts=redact_tail(proc.stdout,16000)
+            stderr,err_counts=redact_tail(proc.stderr,16000)
+            redaction=redaction_summary(out_counts,err_counts)
         except subprocess.TimeoutExpired:
             status,code,stdout,stderr="TIMED_OUT",None,"","recipe timeout"
+            redaction=redaction_summary()
         except (OSError, UnicodeError) as exc:
             status,code,stdout,stderr="BLOCKED",None,"",f"runner unavailable: {type(exc).__name__}"
-        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"recipe":recipe,"status":status,"exit_code":code,"started_at":started,"finished_at":time.time(),"stdout_tail":stdout,"stderr_tail":stderr,"workspace":str(workspace),"environment_claim":"local-unattested","authority":"execution-evidence-only"}
+            redaction=redaction_summary()
+        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"recipe":recipe,"status":status,"exit_code":code,"started_at":started,"finished_at":time.time(),"stdout_tail":stdout,"stderr_tail":stderr,"output_redaction":redaction,"workspace":str(workspace),"environment_claim":"local-unattested","authority":"execution-evidence-only"}
         receipt["sha256"]=digest(receipt)
         with closing(self.connect()) as db, db:
             changed=db.execute("UPDATE runs SET status=?,receipt=? WHERE id=? AND status='RUNNING'",(status,canonical(receipt),rid)).rowcount
