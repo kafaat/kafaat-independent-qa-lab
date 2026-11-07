@@ -1,0 +1,41 @@
+{
+  "format": "kafaat.independent-qa-lab.receipt-errata.v1",
+  "corrects": {
+    "path": "docs/evidence/db-obs-001-lab-receipt-20261107.json",
+    "sha256": "da5efe88edf3630b880504ca8540a4ec1e93ee95914e69c2e688f59aeb1df1df",
+    "published_in": "kafaat/kafaat-independent-qa-lab merge commit 312c26aa34b91fe301ea637bb7b54823412cb9da (PR #57)"
+  },
+  "policy": "The receipt is left byte-for-byte unchanged so its fingerprint stays the one that was verified. This file records corrections beside it.",
+  "issued_by": "the reviewing session (not the measuring session); counts re-derived from the GitHub Actions API for kafaat/technical-hospital workflow db-observation-controls.yml (113 runs listed) and confirmed independently by the technical-hospital session",
+  "issued_at": "2026-11-07",
+  "verdict_changed": false,
+  "corrections": [
+    {
+      "field": "condition_3.gaps[1]",
+      "as_published": "16 of the 38 runs are pushes on 7 Nov",
+      "correct": "15 of the 38 runs are pushes on 7 Nov (UTC); 18 eligible runs in all on that day",
+      "evidence": "push runs on main created 2026-11-07 (UTC): #75, #77, #79, #81, #83, #87, #92, #94, #96, #98, #100, #103, #107, #109, #111"
+    },
+    {
+      "field": "condition_3.completeness",
+      "as_published": "runs #12-#111 are all accounted for (43 pull_request runs on PR branches, excluded by rule; ...)",
+      "correct": "43 is the number of pull_request runs inside the window (created_at >= 2026-11-02T20:00:00Z). Across runs #12-#111 there are 54 pull_request runs; the other 46 are push/schedule runs on main (8 before the window, 38 eligible).",
+      "evidence": "run counts by event and created_at from the same API listing"
+    },
+    {
+      "field": "publication",
+      "as_published": "Not yet published to kafaat-independent-qa-lab ... Until then this file is unauthenticated.",
+      "correct": "Written at issue time, before publication. The receipt was published by merge commit 312c26a with its fingerprint unchanged."
+    },
+    {
+      "field": "condition_3.result.streak_starts_at_run",
+      "as_published": 41541631626,
+      "correct": "Clarification only: the value is a run id, not a run number; it is run #40 (2026-11-02T22:58:07Z), the first_run of the same result."
+    }
+  ],
+  "unchanged": {
+    "condition_3": "PASS (38 consecutive clean runs against a window of 30)",
+    "condition_2": "PASS (records consistent); independent replay NOT_RUN",
+    "does_not_change": "DB-OBS-001 UNDETERMINED; distribution_mode REVIEW_ONLY; release_gate_status BLOCKED; production_accepted false"
+  }
+}
