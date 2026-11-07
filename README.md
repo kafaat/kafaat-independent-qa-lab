@@ -33,6 +33,17 @@ counts. The rules are a reduced port of unified-local-lab's `ull-redaction-2`
 ([qa_lab/redaction.py](qa_lab/redaction.py)). Redaction is heuristic: zero
 findings does not mean the output has no secrets (`completeness_claimed: false`).
 
+## Mutation controls
+`python tools/mutation/verify_mutations.py` applies each mutation in
+[tools/mutation/controls.json](tools/mutation/controls.json) to a disposable copy
+of the tracked source and requires its named test to fail by assertion; the
+baseline must pass first, and import errors, crashes, skips and timeouts never
+count as kills. The controls guard the receipt digest check, the workspace and
+single-Authorization-header fixes, tail redaction, `source_sha_verified`, and
+the gate's drop/change acknowledgements. The `mutation-controls` job runs it on
+every pull request. Method from unified-local-lab's `verify_066_mutations.py`;
+these are targeted controls, not a mutation score.
+
 ## Optional local operator console
 An opt-in, loopback-only server-rendered browser console now supports a single
 local operator: login/logout, bounded run search and pagination, approved-recipe

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "verify-accepts-any-receipt",
+    "guards": "Lab.verify must reject a receipt whose digest no longer matches (PR #61)",
+    "path": "qa_lab/core.py",
+    "old": "        return hmac.compare_digest(digest({k:v for k,v in receipt.items() if k!=\"sha256\"}), receipt[\"sha256\"])",
+    "new": "        return True",
+    "test": "tests.test_runtime_hardening_20261107.VerifyTests"
+  },
+  {
+    "id": "missing-workspace-is-a-plain-error",
+    "guards": "a missing workspace must not burn pending runs (PR #61)",
+    "path": "qa_lab/core.py",
+    "old": "            raise WorkspaceUnavailable(f\"workspace unavailable: {type(exc).__name__}\") from exc",
+    "new": "            raise ValueError(f\"workspace unavailable: {type(exc).__name__}\") from exc",
+    "test": "tests.test_runtime_hardening_20261107.WorkspaceTests.test_worker_does_not_burn_pending_runs_when_workspace_is_missing"
+  },
+  {
+    "id": "bearer-accepts-duplicate-headers",
+    "guards": "exactly one Authorization header (PR #61)",
+    "path": "qa_lab/core.py",
+    "old": "    if not token or len(values) != 1:",
+    "new": "    if not token or not values:",
+    "test": "tests.test_runtime_hardening_20261107.BearerTests"
+  },
+  {
+    "id": "redaction-truncates-before-redacting",
+    "guards": "a secret at the receipt boundary is never left partly visible (PR #62)",
+    "path": "qa_lab/redaction.py",
+    "old": "    redacted, counts = redact_text((output or \"\")[-MAX_INPUT_CHARS:])\n    return redacted[-keep:] if keep else \"\", counts",
+    "new": "    redacted, counts = redact_text((output or \"\")[-keep:] if keep else \"\")\n    return redacted, counts",
+    "test": "tests.test_receipt_redaction.RedactTailTests"
+  },
+  {
+    "id": "receipt-not-redacted",
+    "guards": "receipt tails are redacted before hashing (PR #62)",
+    "path": "qa_lab/core.py",
+    "old": "            stdout,out_counts=redact_tail(proc.stdout,16000)",
+    "new": "            stdout,out_counts=proc.stdout[-16000:],{}",
+    "test": "tests.test_receipt_redaction.ReceiptIntegrationTests.test_sqlite_receipt_is_redacted_before_hashing_and_still_verifies"
+  },
+  {
+    "id": "source-sha-claimed-verified",
+    "guards": "source_sha_verified is false when the checkout was not compared (PR #64)",
+    "path": "qa_lab/core.py",
+    "old": "        if os.environ.get(\"QA_REQUIRE_GIT_SHA\", \"0\") != \"1\":\n            return False",
+    "new": "        if os.environ.get(\"QA_REQUIRE_GIT_SHA\", \"0\") != \"1\":\n            return True",
+    "test": "tests.test_source_attestation.SourceAttestationTests.test_unchecked_source_is_marked_unverified"
+  },
+  {
+    "id": "gate-ignores-dropped-checks",
+    "guards": "a PR cannot silently drop a check the base requires (PR #59)",
+    "path": "tools/ci/required_checks_gate.py",
+    "old": "        if name in ack_dropped:",
+    "new": "        if True:",
+    "test": "tests.test_required_checks_gate.CompareTreesTests"
+  },
+  {
+    "id": "gate-ignores-gate-changes",
+    "guards": "a PR that changes the gate must say so (PR #59)",
+    "path": "tools/ci/required_checks_gate.py",
+    "old": "    if changed and ack_change:",
+    "new": "    if changed or ack_change:",
+    "test": "tests.test_required_checks_gate.CompareTreesTests.test_gate_changes_need_explicit_acknowledgement"
+  }
+]
