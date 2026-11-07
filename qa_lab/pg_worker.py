@@ -10,6 +10,7 @@ import sys
 import time
 import uuid
 from .pg_queue import PostgresQueue
+from .redaction import redact_tail, summary as redaction_summary
 
 def execute_one(queue, worker_id):
     job=queue.claim(worker_id)
@@ -33,7 +34,9 @@ def execute_one(queue, worker_id):
     try:
         proc=subprocess.run([sys.executable,'-c',"print('qa-smoke-ok')"],capture_output=True,text=True,timeout=10)
         status='PASSED' if proc.returncode==0 else 'FAILED'
-        receipt={'status':status,'exit_code':proc.returncode,'stdout_tail':proc.stdout[-1024:],'stderr_tail':proc.stderr[-1024:],'source_sha':request.get('source_sha'),'recipe':'python-smoke','authority':'execution-evidence-only','environment_claim':'unattested-worker'}
+        stdout,out_counts=redact_tail(proc.stdout,1024)
+        stderr,err_counts=redact_tail(proc.stderr,1024)
+        receipt={'status':status,'exit_code':proc.returncode,'stdout_tail':stdout,'stderr_tail':stderr,'output_redaction':redaction_summary(out_counts,err_counts),'source_sha':request.get('source_sha'),'recipe':'python-smoke','authority':'execution-evidence-only','environment_claim':'unattested-worker'}
     except subprocess.TimeoutExpired:
         status='TIMED_OUT'
         receipt={'status':status,'reason':'timeout','authority':'execution-evidence-only','environment_claim':'unattested-worker'}
