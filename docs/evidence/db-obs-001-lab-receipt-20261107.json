@@ -1,0 +1,81 @@
+{
+  "format": "kafaat.independent-qa-lab.receipt.v1",
+  "subject": "kafaat/technical-hospital DB-OBS-001 exit option C, conditions 2 and 3",
+  "requested_by": "technical-hospital session session_01B3mjkfjrq1kskvy3mRBPGR",
+  "measured_by": "a separate session (unified-local-lab / SAHOOL work), not the author session; read-only",
+  "measured_at": "2026-11-07T16:10Z",
+  "access": "read-only: GitHub Actions API, a git clone, Railway read tools; nothing written to the hospital repo or its environment",
+  "inputs": {
+    "repo_head": "3e6761efd759275886dad8e658cc900f36ae7385",
+    "evidence/db-obs-001-exit-window.json": "731c6e0b804bde2eb99cebcec72fccab402f347324e1ba02db1e86ff87b2bb7e",
+    "evidence/db-obs-001-condition-2-railway-20261102.json": "963f547ad2e1f56d8e5df5cbe8d5135c5f39a6c0324e23cf21f0e07717918715",
+    "qa/storage/exit_window.py": "6c4c52acaa34eb1982e18bb3ff05793a32034152ba52a79927362afe3d6204d2",
+    "scripts/target_drill.py": "3d2b4ae10c23098e5309573bfb1634706e58a6098905722f83687fa238fbd773"
+  },
+  "condition_3": {
+    "verdict": "PASS",
+    "method": "Counting rules re-implemented independently (not by running exit_window.py): completed, main, push|schedule, created_at >= 2026-11-02T20:00:00Z, ordered by (created_at,id); success +1, cancelled/skipped neutral, anything else resets.",
+    "result": {
+      "eligible_runs": 38,
+      "consecutive_clean_runs": 38,
+      "window_runs": 30,
+      "neutral": 0,
+      "resets": 0,
+      "first_run": "run #40 2026-11-02T22:58:07Z",
+      "last_run": "run #111 2026-11-07T15:52:32Z (3e6761e)",
+      "streak_starts_at_run": 41541631626
+    },
+    "completeness": "All 111 runs of the workflow listed without a branch filter; runs #12-#111 are all accounted for (43 pull_request runs on PR branches, excluded by rule; no failed, cancelled or workflow_dispatch runs on main in the window). Runs #1-#11 predate the window.",
+    "reconciliation_with_hospital_reports": {
+      "2026-11-03T05:51": 3,
+      "2026-11-04T05:51": 8,
+      "2026-11-05T05:51": 12,
+      "2026-11-06T05:51": 17,
+      "2026-11-07T05:51": 21,
+      "note": "21 at 05:51 on 7 Nov matches the hospital's latest db-obs-exit-window report; 30 was reached at run #94 (2026-11-07T11:02:40Z)."
+    },
+    "control_stability": "In the window the controls' definition (workflow steps, db_obs001.py, the two test files, the 40-case assertion) did not change; the only change was the schedule cron 6h -> 1h (e105583), which the counting rules permit.",
+    "gaps": [
+      "What is counted is the synthetic controls (status CONTROLS_PASS_NOT_HISTORICAL_RESOLUTION); a clean window is not evidence about production data.",
+      "The window spans ~4.7 calendar days; 16 of the 38 runs are pushes on 7 Nov, so the calendar coverage is thinner than 30 runs suggests.",
+      "The hospital's own db-obs-exit-window report after 05:51 was not compared (the next report was due after the cadence change)."
+    ]
+  },
+  "condition_2": {
+    "verdict": "PASS (records consistent); independent replay NOT_RUN",
+    "checks": {
+      "fingerprints_recomputed": "sha256(json.dumps(tables, sort_keys=True)) per target_drill.py recomputes seed=df080b26, after=f6ce1c29, verify=df080b26",
+      "sequence_hashes": "seed == verify == verify_repeat; after differs; seed and verify tables identical; one system_identifier throughout (consistent with a volume restore)",
+      "row_deltas": "after = seed + one project (resources +3, other tables +1, inbox 0)",
+      "railway_deployments": {
+        "b499c416 seed": "hospital-drill, created 20:49:16 < seed 20:49:45",
+        "175e28db after": "hospital-drill, created 21:01:55 < after 21:02:12",
+        "41427d03 restore": "Postgres postgres-ssl:18, created 21:11:06, SUCCESS, still the live deployment",
+        "8843452f api_redeploy": "hospital-api, reason redeploy, 21:11:32 (after the restore)",
+        "5bbf2381 verify": "hospital-drill, redeploy 21:11:59 < verify 21:12:17",
+        "f9ae67e2 verify_repeat": "hospital-drill, auto deploy of 4ed471c at 21:14:18 < 21:14:36"
+      },
+      "volumes": "04a07657 'postgres-2026-11-02 21:00 UTC' is mounted on Postgres; 8ef5fcc2 'postgres-volume' is retained and unmounted, as declared"
+    },
+    "gaps": [
+      "The backup's own time (21:00 UTC, between seed 20:49 and after 21:02) rests on the volume name and the owner's label; the backup record itself was not read.",
+      "Table contents were not re-observed by this lab; the check is consistency of the records, not a re-run of the drill.",
+      "Declared limits stand: no PITR, synthetic writes only, API redeployed after restore (a running API across a restore not measured)."
+    ],
+    "cleanup_check": {
+      "verified_at": "2026-11-07T16:00Z",
+      "hospital_drill_start_command": "python -c \"print('db-obs-001 drill finished; this service awaits deletion')\", restartPolicy NEVER (Railway service config, read-only)",
+      "latest_deployment_0fdf370c_log": "prints only the line above; no DRILL_REPORT",
+      "residual": "The service still carries the variables DATABASE_URL, DRILL_TOKEN and other drill variables until it is deleted; deletion is the owner's decision."
+    }
+  },
+  "does_not_change": {
+    "DB-OBS-001": "UNDETERMINED",
+    "distribution_mode": "REVIEW_ONLY",
+    "release_gate_status": "BLOCKED",
+    "production_accepted": false,
+    "note": "A measurement only; lifting the gate is the owner's decision."
+  },
+  "publication": "Not yet published to kafaat-independent-qa-lab: push access was not granted to this session. Until then this file is unauthenticated.",
+  "hospital_cross_check": "The hospital session ran exit_window.py by workflow_dispatch (run 42388793119, 15:56Z, not counted): WINDOW_MET 38/30, no resets, the same as this count."
+}
