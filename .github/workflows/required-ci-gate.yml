@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   checks: read
+  pull-requests: read
 concurrency:
   group: ci-gate-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -19,6 +20,7 @@ jobs:
     permissions:
       contents: read
       checks: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

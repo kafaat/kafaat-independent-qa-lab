@@ -12,7 +12,10 @@ workflow files themselves:
   ``success``; a missing check fails closed at the deadline;
 * any other GitHub Actions check run present on the commit (for example a
   path-filtered workflow that was triggered) must also conclude ``success``;
-* for re-run jobs only the latest attempt of each check name counts.
+* for re-run jobs only the latest attempt of each check name *within one
+  check suite* counts: a failure in one suite (for example the
+  ``pull_request`` run) is not hidden by a newer success of the same name in
+  another suite (for example a ``push`` run on the same commit).
 
 With ``--head-tree`` (the ``pull_request_target`` run) this script and its
 workflow come from the base branch and the PR head is data only. The expected
@@ -28,6 +31,14 @@ must not silently weaken the gate:
   ``ci-gate-change: acknowledged``.
 
 Both acknowledgements are explicit and stay on the PR; neither is approval.
+
+Also with ``--head-tree``, a path-filtered workflow whose only filters are
+``paths``/``paths-ignore`` (patterns using ``*``, ``**``, ``?`` and leading
+``!``) becomes required when the PR's changed files trigger it, so a
+triggered workflow that never starts fails closed at the deadline instead of
+being ignored. Workflows with other filters or pattern syntax, and PRs with
+300 or more changed files (GitHub's own diff limit for path filters), are
+reported as not evaluated.
 
 Standard library only, so it runs on a bare ``setup-python`` interpreter.
 """
@@ -154,6 +165,103 @@ def parse_workflow(text):
     return every_pr, names
 
 
+PATH_ONLY_KEYS = {"paths", "paths-ignore"}
+PATH_DIFF_LIMIT = 300
+_GLOB_UNSUPPORTED = re.compile(r"[\[\]{}\\]")
+
+
+def _block_list(lines):
+    items = []
+    for line in lines:
+        text = line.strip()
+        if not text.startswith("- "):
+            raise WorkflowFormatError(f"paths must be a block list: {text!r}")
+        items.append(text[2:].split(" #", 1)[0].strip().strip("'\""))
+    if not items or any(not item for item in items):
+        raise WorkflowFormatError("empty path pattern")
+    return items
+
+
+def pr_path_filters(text):
+    """Return {"paths": [...], "paths-ignore": [...]} for a pull_request trigger
+    filtered only by paths, or None when there is no such trigger or other
+    filters apply."""
+    blocks = _top_level_blocks(text)
+    _, *on_lines = blocks.get("on", [""])
+    triggers = _children(on_lines, 2)
+    if "pull_request" not in triggers:
+        return None
+    _, child_lines = triggers["pull_request"]
+    filters = _children(child_lines, 4) if child_lines else {}
+    if not filters or not set(filters) <= PATH_ONLY_KEYS:
+        return None
+    return {key: _block_list(lines) for key, (_, lines) in filters.items()}
+
+
+def glob_regex(pattern):
+    """GitHub filter glob to regex: ``**`` any path, ``*`` no slash, ``?`` one char."""
+    if _GLOB_UNSUPPORTED.search(pattern):
+        raise ValueError(f"unsupported pattern syntax: {pattern}")
+    out, i = [], 0
+    while i < len(pattern):
+        if pattern.startswith("**", i):
+            out.append(".*")
+            i += 2
+        elif pattern[i] == "*":
+            out.append("[^/]*")
+            i += 1
+        elif pattern[i] == "?":
+            out.append("[^/]")
+            i += 1
+        else:
+            out.append(re.escape(pattern[i]))
+            i += 1
+    return re.compile("".join(out) + r"\Z")
+
+
+def _matches(patterns, path):
+    """Ordered patterns; a later ``!pattern`` excludes what earlier ones matched."""
+    hit = False
+    for pattern in patterns:
+        negate = pattern.startswith("!")
+        if glob_regex(pattern[1:] if negate else pattern).match(path):
+            hit = not negate
+    return hit
+
+
+def triggered_by(filters, changed_files):
+    """Would GitHub run a paths/paths-ignore-filtered pull_request workflow?"""
+    files = list(changed_files)
+    run = True
+    if "paths" in filters:
+        run = any(_matches(filters["paths"], f) for f in files)
+    if run and "paths-ignore" in filters:
+        run = not files or not all(_matches(filters["paths-ignore"], f) for f in files)
+    return run
+
+
+def triggered_path_checks(workflows_dir, changed_files):
+    """Return (required check names, notices) for path-filtered workflows."""
+    changed_files = list(changed_files)
+    required, notices = [], []
+    if len(changed_files) >= PATH_DIFF_LIMIT:
+        return [], [f"path filters not evaluated: {len(changed_files)} changed files"]
+    for path in sorted(Path(workflows_dir).glob("*.y*ml")):
+        text = path.read_text(encoding="utf-8")
+        every_pr, names = parse_workflow(text)
+        if every_pr:
+            continue
+        try:
+            filters = pr_path_filters(text)
+            if filters is None:
+                continue
+            if triggered_by(filters, changed_files):
+                required.extend(names)
+        except (ValueError, WorkflowFormatError) as error:
+            notices.append(f"path filters not evaluated for {path.name}: {error}")
+    return sorted(required), notices
+
+
 def collect_check_names(workflows_dir):
     """Return (expected_every_pr_checks, all_check_names) for a workflows dir."""
     expected, every_name = [], []
@@ -237,7 +345,10 @@ def pr_body(event_path):
 
 
 def latest_runs(check_runs):
-    """Keep the newest GitHub Actions attempt per check name."""
+    """Keep the newest GitHub Actions attempt per (check suite, check name).
+
+    Returns {name: [latest run of that name in each suite]}.
+    """
     latest = {}
     for run in check_runs:
         app = run.get("app") or {}
@@ -246,9 +357,13 @@ def latest_runs(check_runs):
         name = run.get("name")
         if not isinstance(name, str) or name == GATE_CHECK_NAME:
             continue
-        if name not in latest or run.get("id", 0) > latest[name].get("id", 0):
-            latest[name] = run
-    return latest
+        key = (name, (run.get("check_suite") or {}).get("id"))
+        if key not in latest or run.get("id", 0) > latest[key].get("id", 0):
+            latest[key] = run
+    by_name = {}
+    for (name, _), run in sorted(latest.items(), key=lambda item: str(item[0])):
+        by_name.setdefault(name, []).append(run)
+    return by_name
 
 
 def evaluate(expected, check_runs):
@@ -256,18 +371,52 @@ def evaluate(expected, check_runs):
     latest = latest_runs(check_runs)
     failed = sorted(
         f"{name}: {run.get('conclusion')}"
-        for name, run in latest.items()
+        for name, runs in latest.items() for run in runs
         if run.get("status") == "completed" and run.get("conclusion") != SUCCESS
     )
     if failed:
-        return "fail", failed
+        return "fail", sorted(set(failed))
     missing = sorted(set(expected) - set(latest))
-    running = sorted(n for n, r in latest.items() if r.get("status") != "completed")
+    running = sorted({n for n, runs in latest.items() for r in runs
+                      if r.get("status") != "completed"})
     if missing or running:
         return "pending", [f"missing: {n}" for n in missing] + [
             f"running: {n}" for n in running
         ]
     return "pass", sorted(latest)
+
+
+def _get_json(url, token):
+    request = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+    })
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def fetch_changed_files(repository, number, token, api="https://api.github.com"):
+    """Changed paths of a PR as GitHub lists them (new name for renames).
+
+    Over-requiring a check GitHub would not start blocks a merge until the
+    deadline, so only the listed filename is used. Capped by GitHub at 3000.
+    """
+    files, page = [], 1
+    while True:
+        batch = _get_json(f"{api}/repos/{repository}/pulls/{int(number)}/files"
+                          f"?per_page=100&page={page}", token)
+        files.extend(item["filename"] for item in batch)
+        if len(batch) < 100 or page >= 30:
+            return files
+        page += 1
+
+
+def pr_number(event_path):
+    if not event_path:
+        return None
+    with open(event_path, encoding="utf-8") as handle:
+        return ((json.load(handle).get("pull_request") or {}).get("number"))
 
 
 def fetch_check_runs(repository, sha, token, api="https://api.github.com"):
@@ -362,8 +511,25 @@ def main(argv=None):
               file=sys.stderr)
         return 1
 
-    print(f"ci-gate: {len(expected)} checks required on every pull request "
-          f"for {args.sha}")
+    if args.head_tree:
+        number = pr_number(args.event_path)
+        if not number:
+            print("FAIL: pull request number missing from the event", file=sys.stderr)
+            return 1
+        try:
+            changed = fetch_changed_files(args.repository, number, token)
+            path_required, path_notices = triggered_path_checks(
+                Path(args.head_tree) / ".github" / "workflows", changed)
+        except (urllib.error.URLError, TimeoutError, ValueError, KeyError,
+                WorkflowFormatError, OSError) as error:
+            print(f"FAIL: path filters: {error}", file=sys.stderr)
+            return 1
+        for notice in path_notices:
+            print(f"NOTICE: {notice}")
+        if path_required:
+            print("triggered by changed paths: " + ", ".join(path_required))
+        expected = sorted(set(expected) | set(path_required))
+    print(f"ci-gate: {len(expected)} checks required for {args.sha}")
     state, messages = wait_for_checks(
         expected,
         lambda: fetch_check_runs(args.repository, args.sha, token),
