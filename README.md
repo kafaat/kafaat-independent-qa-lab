@@ -33,6 +33,17 @@ counts. The rules are a reduced port of unified-local-lab's `ull-redaction-2`
 ([qa_lab/redaction.py](qa_lab/redaction.py)). Redaction is heuristic: zero
 findings does not mean the output has no secrets (`completeness_claimed: false`).
 
+## Receipt attestations (DSSE)
+`python -m qa_lab.attestation export --data-dir D --run-id R --output F [--key ed25519.pem]`
+wraps a receipt in an in-toto Statement (test-result v0.1 predicate) inside a
+DSSE envelope; `verify --envelope F [--trust T]` checks it. The contract is
+shared with unified-local-lab (same types, PAE, envelope keys and
+`principal ed25519 <base64 SPKI>` trust lines; Ed25519 via `openssl` only).
+An unsigned envelope is UNSIGNED (consistency only); a valid signature by a key
+not in the verifier's trust file is UNTRUSTED; only a listed key is TRUSTED.
+No key is generated, stored or configured by the lab, and nothing here is a
+release or production approval.
+
 ## Optional local operator console
 An opt-in, loopback-only server-rendered browser console now supports a single
 local operator: login/logout, bounded run search and pagination, approved-recipe
