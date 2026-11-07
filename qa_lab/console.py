@@ -419,7 +419,7 @@ class Console(BaseHTTPRequestHandler):
         session = self.session()
         if not session:
             return self.respond(401, page("غير مصرح", "<p>سجّل الدخول أولًا.</p>"))
-        if not hmac.compare_digest(params.get("csrf", ""), session["csrf"]):
+        if not hmac.compare_digest(str(params.get("csrf", "")).encode("utf-8"), session["csrf"].encode("utf-8")):
             return self.respond(403, page("مرفوض", "<p>رمز الحماية غير صالح.</p>", session))
         if path.path == "/logout":
             if set(params) != {"csrf"}:

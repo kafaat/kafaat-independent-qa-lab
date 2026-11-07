@@ -1,16 +1,15 @@
 """Authenticated, read-only run dashboard for independent QA evidence."""
-import hmac
 import html
 import os
 from contextlib import closing
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
-from .core import Lab
+from .core import Lab, bearer_matches
 
 class Dashboard(BaseHTTPRequestHandler):
     lab=None
     def do_GET(self):
         token=os.environ.get('QA_DASHBOARD_TOKEN','')
-        if len(token)<24 or not hmac.compare_digest(self.headers.get('Authorization',''),'Bearer '+token):
+        if len(token)<24 or not bearer_matches(self.headers.get_all('Authorization',[]),token):
             self.send_response(401);self.send_header('WWW-Authenticate','Bearer');self.end_headers();return
         if self.path!='/':self.send_error(404);return
         with closing(self.lab.connect()) as db:

@@ -1,12 +1,11 @@
 """Local HTTP interface; deliberately read/submit only, no remote command execution."""
 import json
 import os
-import hmac
 from .intelligence import classify
 from .legacy_guard import LegacyProbeGuard
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
-from .core import Lab
+from .core import Lab, bearer_matches
 
 class Handler(BaseHTTPRequestHandler):
     lab=None
@@ -22,7 +21,7 @@ class Handler(BaseHTTPRequestHandler):
     def authorized(self):
         token=os.environ.get("QA_API_TOKEN","")
         values=self.headers.get_all("Authorization",[])
-        return bool(token) and len(values)==1 and hmac.compare_digest(values[0],"Bearer "+token)
+        return bearer_matches(values, token)
     def do_GET(self):
         path=urlsplit(self.path).path
         if path=="/healthz": return self.send(200,{"status":"ok"})
