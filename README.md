@@ -21,6 +21,18 @@ individual user sessions and project authorization, broader recipe acceptance,
 and legacy licensing/provenance/secret reviews remain separately gated.
 No production deployment is performed by the root-stack acceptance workflow.
 
+## Receipt output redaction
+Before a receipt is hashed, the SQLite worker and the PostgreSQL smoke worker
+redact secret-shaped values in `stdout_tail`/`stderr_tail` (tokens for GitHub,
+AWS, Slack, Anthropic/OpenAI, JWTs, bearer/basic headers, URL credentials,
+keyword assignments such as `PASSWORD=...`, and PEM private keys). Each value
+becomes `[REDACTED:<rule>]` with no digest of the secret, and redaction runs
+before truncation so a secret is never cut in half and left partly visible.
+The receipt's `output_redaction` records the rules version and per-rule
+counts. The rules are a reduced port of unified-local-lab's `ull-redaction-2`
+([qa_lab/redaction.py](qa_lab/redaction.py)). Redaction is heuristic: zero
+findings does not mean the output has no secrets (`completeness_claimed: false`).
+
 ## Optional local operator console
 An opt-in, loopback-only server-rendered browser console now supports a single
 local operator: login/logout, bounded run search and pagination, approved-recipe
