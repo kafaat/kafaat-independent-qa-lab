@@ -97,10 +97,9 @@ cannot weaken its own gate, and any weakening it proposes must be explicit:
   has the line `ci-gate-change: acknowledged`. The change takes effect only
   after merge.
 
-These lines are a visible record, not an approval. The plain `pull_request`
-trigger remains only so the PR introducing this can pass its own gate; a
-follow-up PR removes it once this is on `main`. Until then each PR also gets a
-second, PR-controlled `ci-gate` run.
+These lines are a visible record, not an approval. There is no PR-controlled
+`ci-gate` run: the transitional `pull_request` trigger used by PR #59 was
+removed once the gate was on `main`.
 
 [Canonical JSON policy](docs/governance/main-ruleset.json),
 [legacy CI-only alias](docs/governance/main-ruleset-ci-only.json),

@@ -2,18 +2,15 @@ name: Required CI gate
 # pull_request_target runs this file and the gate script from the base branch,
 # so a pull request cannot weaken the gate that judges it. The PR head is only
 # fetched as data (.github/workflows and tools/ci) and parsed; nothing from it
-# is executed. The plain pull_request trigger is transitional: it lets the PR
-# that introduces pull_request_target pass its own gate, and is removed by a
-# follow-up PR once this file is on main.
+# is executed.
 on:
-  pull_request:
   pull_request_target:
     types: [opened, synchronize, reopened, edited]
 permissions:
   contents: read
   checks: read
 concurrency:
-  group: ci-gate-${{ github.event_name }}-${{ github.event.pull_request.number }}
+  group: ci-gate-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 jobs:
   ci-gate:
@@ -30,7 +27,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Fetch the PR head as data only (never executed)
-        if: github.event_name == 'pull_request_target'
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -40,14 +36,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/pr-head"
           git archive refs/remotes/pr/head .github/workflows tools/ci | tar -x -C "$RUNNER_TEMP/pr-head"
       - name: Require every pull-request check on the head commit to succeed (trusted base)
-        if: github.event_name == 'pull_request_target'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GATE_SHA: ${{ github.event.pull_request.head.sha }}
         run: python -I -u tools/ci/required_checks_gate.py --sha "$GATE_SHA" --head-tree "$RUNNER_TEMP/pr-head"
-      - name: Require every pull-request check on the head commit to succeed (transitional)
-        if: github.event_name == 'pull_request'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GATE_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python -I -u tools/ci/required_checks_gate.py --sha "$GATE_SHA"
