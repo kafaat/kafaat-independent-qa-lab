@@ -14,6 +14,21 @@ workflow files themselves:
   path-filtered workflow that was triggered) must also conclude ``success``;
 * for re-run jobs only the latest attempt of each check name counts.
 
+With ``--head-tree`` (the ``pull_request_target`` run) this script and its
+workflow come from the base branch and the PR head is data only. The expected
+checks are those of the PR head, parsed by this trusted script, and the PR
+must not silently weaken the gate:
+
+* a check that the base requires on every pull request but the PR head no
+  longer does (job removed or renamed, workflow deleted or path-filtered)
+  fails the gate unless the PR description has a line
+  ``ci-gate-drop: <name>[, <name>...]`` naming it;
+* a change to the gate itself (its workflow or ``tools/ci/required_checks_gate.py``)
+  fails the gate unless the PR description has the line
+  ``ci-gate-change: acknowledged``.
+
+Both acknowledgements are explicit and stay on the PR; neither is approval.
+
 Standard library only, so it runs on a bare ``setup-python`` interpreter.
 """
 
@@ -32,6 +47,11 @@ GITHUB_ACTIONS_APP_ID = 15368
 GATE_CHECK_NAME = "ci-gate"
 SUCCESS = "success"
 PR_FILTER_KEYS = ("paths", "paths-ignore", "branches", "branches-ignore", "types")
+
+GATE_FILES = (".github/workflows/required-ci-gate.yml",
+              "tools/ci/required_checks_gate.py")
+_ACK_DROP = re.compile(r"(?m)^[ \t]*ci-gate-drop:[ \t]*(.+?)[ \t]*$")
+_ACK_CHANGE = re.compile(r"(?m)^[ \t]*ci-gate-change:[ \t]*acknowledged[ \t]*$")
 
 _TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*|\"on\"|'on'):(.*)$")
 _CHILD = re.compile(r"^(\s+)([A-Za-z_][\w-]*):(.*)$")
@@ -160,6 +180,62 @@ def collect_check_names(workflows_dir):
     return sorted(expected), sorted(every_name)
 
 
+def acknowledgements(body):
+    """Return (names acknowledged as dropped, gate change acknowledged)."""
+    body = (body or "").replace("\r\n", "\n")
+    dropped = set()
+    for match in _ACK_DROP.finditer(body):
+        dropped.update(n.strip() for n in match.group(1).split(",") if n.strip())
+    return dropped, bool(_ACK_CHANGE.search(body))
+
+
+def _read_optional(path):
+    try:
+        return Path(path).read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+def compare_trees(base_root, head_root, body):
+    """Compare the trusted base with the PR head (data only).
+
+    Returns (expected, notices, problems): the head's every-PR checks parsed by
+    the trusted parser, informational notices, and blocking problems.
+    """
+    base_expected, _ = collect_check_names(Path(base_root) / ".github" / "workflows")
+    try:
+        head_expected, _ = collect_check_names(Path(head_root) / ".github" / "workflows")
+    except WorkflowFormatError as error:
+        raise WorkflowFormatError(f"PR head: {error}") from None
+    ack_dropped, ack_change = acknowledgements(body)
+    notices, problems = [], []
+    for name in sorted(set(base_expected) - set(head_expected)):
+        if name in ack_dropped:
+            notices.append(f"acknowledged drop: {name}")
+        else:
+            problems.append(
+                f"required on every pull request by the base but not by this PR: {name} "
+                f"(if intended, add 'ci-gate-drop: {name}' to the PR description)")
+    changed = [rel for rel in GATE_FILES
+               if _read_optional(Path(base_root) / rel) != _read_optional(Path(head_root) / rel)]
+    if changed and ack_change:
+        notices.extend(f"acknowledged gate change: {rel}" for rel in changed)
+    elif changed:
+        problems.extend(
+            f"this PR changes the gate: {rel} (takes effect after merge; if intended, "
+            f"add 'ci-gate-change: acknowledged' to the PR description)" for rel in changed)
+    return head_expected, notices, problems
+
+
+def pr_body(event_path):
+    """Read the PR description from the event payload (never from argv/shell)."""
+    if not event_path:
+        return ""
+    with open(event_path, encoding="utf-8") as handle:
+        event = json.load(handle)
+    return (event.get("pull_request") or {}).get("body") or ""
+
+
 def latest_runs(check_runs):
     """Keep the newest GitHub Actions attempt per check name."""
     latest = {}
@@ -253,14 +329,29 @@ def main(argv=None):
     parser.add_argument("--deadline", type=int, default=40 * 60)
     parser.add_argument("--interval", type=int, default=15)
     parser.add_argument("--settle", type=int, default=20)
+    parser.add_argument("--base-tree", default=".",
+                        help="trusted base checkout used with --head-tree")
+    parser.add_argument("--head-tree",
+                        help="PR head checkout (data only); the base is the current tree")
+    parser.add_argument("--event-path", default=os.environ.get("GITHUB_EVENT_PATH"))
     parser.add_argument("--list", action="store_true",
                         help="print the expected checks and exit (no API calls)")
     args = parser.parse_args(argv)
 
     try:
-        expected, _ = collect_check_names(args.workflows)
-    except WorkflowFormatError as error:
+        if args.head_tree:
+            expected, notices, problems = compare_trees(
+                args.base_tree, args.head_tree, pr_body(args.event_path))
+        else:
+            (expected, _), notices, problems = collect_check_names(args.workflows), [], []
+    except (WorkflowFormatError, OSError, ValueError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
+        return 1
+    for notice in notices:
+        print(f"NOTICE: {notice}")
+    if problems:
+        print("FAIL:", file=sys.stderr)
+        print("\n".join(f"  {problem}" for problem in problems), file=sys.stderr)
         return 1
     if args.list:
         print("\n".join(expected))

@@ -327,3 +327,155 @@ class MainTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def make_tree(root, workflows, gate_script="script v1\n", gate_workflow=None):
+    wf = Path(root) / ".github" / "workflows"
+    wf.mkdir(parents=True)
+    files = {"required-ci-gate.yml": gate_workflow or GATE_WORKFLOW, **workflows}
+    write_workflows(wf, files)
+    ci = Path(root) / "tools" / "ci"
+    ci.mkdir(parents=True)
+    (ci / "required_checks_gate.py").write_text(gate_script, encoding="utf-8")
+    return Path(root)
+
+
+TESTS_WORKFLOW = """\
+name: tests
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+  lint:
+    runs-on: ubuntu-latest
+"""
+
+
+class CompareTreesTests(unittest.TestCase):
+    """--head-tree: the trusted base judges the PR head, which cannot weaken it."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.base = make_tree(Path(self.tmp.name) / "base", {"tests.yml": TESTS_WORKFLOW})
+
+    def head(self, workflows, **kwargs):
+        return make_tree(Path(self.tmp.name) / "head", workflows, **kwargs)
+
+    def test_identical_trees_pass_with_head_checks(self):
+        head = self.head({"tests.yml": TESTS_WORKFLOW})
+        expected, notices, problems = gate.compare_trees(self.base, head, "")
+        self.assertEqual(expected, ["lint", "test"])
+        self.assertEqual((notices, problems), ([], []))
+
+    def test_new_head_workflow_is_required(self):
+        extra = TESTS_WORKFLOW.replace("name: tests", "name: more").replace(
+            "  test:", "  extra:").replace("  lint:", "  extra2:")
+        head = self.head({"tests.yml": TESTS_WORKFLOW, "more.yml": extra})
+        expected, _, problems = gate.compare_trees(self.base, head, "")
+        self.assertEqual(problems, [])
+        self.assertIn("extra", expected)
+
+    def test_path_filter_added_in_pr_is_blocked(self):
+        filtered = TESTS_WORKFLOW.replace("  pull_request:\n",
+                                          "  pull_request:\n    paths:\n      - 'src/**'\n")
+        head = self.head({"tests.yml": filtered})
+        _, _, problems = gate.compare_trees(self.base, head, "")
+        self.assertEqual(len(problems), 2)
+        self.assertTrue(all("ci-gate-drop" in p for p in problems))
+
+    def test_deleted_workflow_and_removed_job_are_blocked(self):
+        _, _, problems = gate.compare_trees(self.base, self.head({}), "")
+        self.assertEqual(len(problems), 2)
+        only_test = TESTS_WORKFLOW.replace("  lint:\n    runs-on: ubuntu-latest\n", "")
+        tmp2 = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp2.cleanup)
+        head = make_tree(Path(tmp2.name) / "h", {"tests.yml": only_test})
+        _, _, problems = gate.compare_trees(self.base, head, "")
+        self.assertEqual(len(problems), 1)
+        self.assertIn(": lint", problems[0])
+
+    def test_explicit_drop_acknowledgement_allows_named_checks_only(self):
+        head = self.head({})
+        _, notices, problems = gate.compare_trees(
+            self.base, head, "Remove tests.\r\nci-gate-drop: lint\n")
+        self.assertEqual(notices, ["acknowledged drop: lint"])
+        self.assertEqual(len(problems), 1)
+        self.assertIn(": test", problems[0])
+        _, _, problems = gate.compare_trees(self.base, head, "ci-gate-drop: lint, test")
+        self.assertEqual(problems, [])
+
+    def test_acknowledgement_must_be_its_own_line(self):
+        head = self.head({})
+        _, _, problems = gate.compare_trees(
+            self.base, head, "see `ci-gate-drop: lint, test` in the docs")
+        self.assertEqual(len(problems), 2)
+
+    def test_gate_changes_need_explicit_acknowledgement(self):
+        for kwargs in ({"gate_script": "script v2 always passes\n"},
+                       {"gate_workflow": GATE_WORKFLOW + "# edited\n"}):
+            with self.subTest(**{k: True for k in kwargs}):
+                tmp2 = tempfile.TemporaryDirectory()
+                self.addCleanup(tmp2.cleanup)
+                head = make_tree(Path(tmp2.name) / "h", {"tests.yml": TESTS_WORKFLOW}, **kwargs)
+                _, _, problems = gate.compare_trees(self.base, head, "")
+                self.assertEqual(len(problems), 1)
+                self.assertIn("changes the gate", problems[0])
+                _, notices, problems = gate.compare_trees(
+                    self.base, head, "ci-gate-change: acknowledged")
+                self.assertEqual(problems, [])
+                self.assertTrue(notices[0].startswith("acknowledged gate change"))
+
+    def test_deleted_gate_script_counts_as_a_change(self):
+        head = self.head({"tests.yml": TESTS_WORKFLOW})
+        (head / "tools" / "ci" / "required_checks_gate.py").unlink()
+        _, _, problems = gate.compare_trees(self.base, head, "")
+        self.assertIn("changes the gate", problems[0])
+
+    def test_unparseable_head_fails_closed(self):
+        head = self.head({"tests.yml": "on: [pull_request]\njobs:\n  x:\n    a: 1\n"})
+        with self.assertRaisesRegex(gate.WorkflowFormatError, "PR head"):
+            gate.compare_trees(self.base, head, "")
+
+    def test_main_blocks_before_any_api_call_and_reads_body_from_event(self):
+        head = self.head({})
+        event = Path(self.tmp.name) / "event.json"
+        event.write_text('{"pull_request": {"body": null}}', encoding="utf-8")
+        argv = ["--base-tree", str(self.base), "--head-tree", str(head),
+                "--event-path", str(event), "--sha", "abc", "--repository", "o/r"]
+        stderr = io.StringIO()
+        with patch.object(gate, "fetch_check_runs") as fetch, \
+                patch.dict("os.environ", {"GITHUB_TOKEN": "t"}), \
+                contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(gate.main(argv), 1)
+        fetch.assert_not_called()
+        self.assertIn("ci-gate-drop: lint", stderr.getvalue())
+
+
+class GateWorkflowTrustTests(unittest.TestCase):
+    """The pull_request_target run must never execute PR-controlled content."""
+
+    source = (WORKFLOWS / "required-ci-gate.yml").read_text(encoding="utf-8")
+
+    def test_runs_from_the_base_on_pull_request_target(self):
+        self.assertRegex(self.source, r"(?m)^  pull_request_target:\s*$")
+        self.assertIn("edited", self.source)
+        self.assertIn("--head-tree", self.source)
+
+    def test_pr_head_is_never_checked_out_or_interpolated_into_shell(self):
+        self.assertNotRegex(self.source, r"(?m)^\s*ref:")
+        self.assertIn("persist-credentials: false", self.source)
+        self.assertNotIn("secrets.", self.source)
+        for line in self.source.splitlines():
+            if "${{" in line:
+                with self.subTest(line=line.strip()):
+                    self.assertNotRegex(line, r"^\s*(run:|git |python |test |mkdir )")
+                    self.assertNotIn("pull_request.body", line)
+                    self.assertNotIn("head.ref", line)
+                    self.assertNotIn("pull_request.title", line)
+
+    def test_head_tree_is_only_archived_not_executed(self):
+        self.assertIn("git archive refs/remotes/pr/head .github/workflows tools/ci", self.source)
+        self.assertNotIn("$RUNNER_TEMP/pr-head/", self.source.replace(
+            '"$RUNNER_TEMP/pr-head"', ""))

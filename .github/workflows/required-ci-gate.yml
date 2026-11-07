@@ -1,11 +1,19 @@
 name: Required CI gate
+# pull_request_target runs this file and the gate script from the base branch,
+# so a pull request cannot weaken the gate that judges it. The PR head is only
+# fetched as data (.github/workflows and tools/ci) and parsed; nothing from it
+# is executed. The plain pull_request trigger is transitional: it lets the PR
+# that introduces pull_request_target pass its own gate, and is removed by a
+# follow-up PR once this file is on main.
 on:
   pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
 permissions:
   contents: read
   checks: read
 concurrency:
-  group: ci-gate-${{ github.event.pull_request.number }}
+  group: ci-gate-${{ github.event_name }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 jobs:
   ci-gate:
@@ -16,10 +24,29 @@ jobs:
       checks: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - name: Require every pull-request check on the head commit to succeed
+      - name: Fetch the PR head as data only (never executed)
+        if: github.event_name == 'pull_request_target'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "+refs/pull/${PR_NUMBER}/head:refs/remotes/pr/head"
+          test "$(git rev-parse refs/remotes/pr/head)" = "$HEAD_SHA"
+          mkdir -p "$RUNNER_TEMP/pr-head"
+          git archive refs/remotes/pr/head .github/workflows tools/ci | tar -x -C "$RUNNER_TEMP/pr-head"
+      - name: Require every pull-request check on the head commit to succeed (trusted base)
+        if: github.event_name == 'pull_request_target'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -I -u tools/ci/required_checks_gate.py --sha "$GATE_SHA" --head-tree "$RUNNER_TEMP/pr-head"
+      - name: Require every pull-request check on the head commit to succeed (transitional)
+        if: github.event_name == 'pull_request'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GATE_SHA: ${{ github.event.pull_request.head.sha }}
