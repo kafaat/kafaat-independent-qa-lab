@@ -75,7 +75,7 @@ class RepositoryWorkflowTests(unittest.TestCase):
         self.assertIn("checks: read", source)
         self.assertNotIn("write", source)
         self.assertIn("github.event.pull_request.head.sha", source)
-        self.assertRegex(source, r"(?m)^  pull_request:\s*$")
+        self.assertRegex(source, r"(?m)^  pull_request_target:\s*$")
 
     def test_all_actions_are_pinned_to_commit_shas(self):
         for path in sorted(WORKFLOWS.glob("*.yml")):
@@ -460,6 +460,8 @@ class GateWorkflowTrustTests(unittest.TestCase):
 
     def test_runs_from_the_base_on_pull_request_target(self):
         self.assertRegex(self.source, r"(?m)^  pull_request_target:\s*$")
+        self.assertNotRegex(self.source, r"(?m)^  pull_request:\s*$")
+        self.assertNotIn("event_name", self.source)
         self.assertIn("edited", self.source)
         self.assertIn("--head-tree", self.source)
 
