@@ -1,5 +1,6 @@
 """Independent QA execution kernel. No hospital case-management authority."""
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -8,6 +9,20 @@ from contextlib import closing
 import subprocess
 import time
 import uuid
+
+class WorkspaceUnavailable(RuntimeError):
+    """The worker's workspace is missing; raised before a claim, so the run stays PENDING."""
+
+
+def bearer_matches(values, token):
+    """Exactly one Authorization header equal to 'Bearer <token>' (bytes compare)."""
+    if not token or len(values) != 1:
+        return False
+    try:
+        return hmac.compare_digest(values[0].encode("utf-8"), ("Bearer " + token).encode("utf-8"))
+    except (AttributeError, UnicodeError):
+        return False
+
 
 RECIPES = {
     "python-smoke": ["python3", "-c", "print('qa-smoke-ok')"],
@@ -63,8 +78,11 @@ class Lab:
         return {"run_id":row[0],"project":row[1],"source_sha":row[2],"recipe":row[3],"status":row[4],"receipt":json.loads(row[5]) if row[5] else None}
 
     def execute(self, rid, workspace, timeout=30):
-        workspace=Path(workspace).resolve(strict=True)
-        if not workspace.is_dir(): raise ValueError("workspace must be a directory")
+        try:
+            workspace=Path(workspace).resolve(strict=True)
+        except OSError as exc:
+            raise WorkspaceUnavailable(f"workspace unavailable: {type(exc).__name__}") from exc
+        if not workspace.is_dir(): raise WorkspaceUnavailable("workspace must be a directory")
         with closing(self.connect()) as db, db:
             db.execute("BEGIN IMMEDIATE")
             row=db.execute("SELECT project,source_sha,recipe,status FROM runs WHERE id=?",(rid,)).fetchone()
@@ -133,5 +151,5 @@ class Lab:
 
     def verify(self,rid):
         receipt=self.get(rid)["receipt"]
-        if receipt is None: return False
-        return digest({k:v for k,v in receipt.items() if k!="sha256"}) == receipt["sha256"]
+        if not isinstance(receipt, dict) or not isinstance(receipt.get("sha256"), str): return False
+        return hmac.compare_digest(digest({k:v for k,v in receipt.items() if k!="sha256"}), receipt["sha256"])

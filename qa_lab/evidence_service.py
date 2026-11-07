@@ -1,11 +1,11 @@
 """Read-only evidence HTTP service. No release or case-management authority."""
-import hmac
 import json
 import os
 import sqlite3
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from .reader import ReadOnlyLab
+from .core import bearer_matches
 
 class EvidenceHandler(BaseHTTPRequestHandler):
     lab = None
@@ -27,7 +27,7 @@ class EvidenceHandler(BaseHTTPRequestHandler):
                 return self.reply(503,{'error':'storage_unavailable'})
             return self.reply(200,{'status':'ok','service':'evidence'})
         token=os.environ.get('QA_API_TOKEN','')
-        if not token or not hmac.compare_digest(self.headers.get('Authorization',''),'Bearer '+token):
+        if not bearer_matches(self.headers.get_all('Authorization',[]),token):
             return self.reply(401,{'error':'unauthorized'})
         if not path.startswith('/v1/evidence/'):
             return self.reply(404,{'error':'not_found'})

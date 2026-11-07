@@ -20,7 +20,10 @@ def execute_one(queue, worker_id):
         from .audio_jobs import enabled, execute, digest
         if not enabled():
             return queue.finish(rid,worker_id,'BLOCKED',{'status':'BLOCKED','reason':'audio recipe disabled','authority':'execution-evidence-only'})
-        receipt=execute(request)
+        try:
+            receipt=execute(request)
+        except Exception as exc:  # keep the worker alive and the claim closed
+            return queue.finish(rid,worker_id,'BLOCKED',{'status':'BLOCKED','reason':f'audio runner error: {type(exc).__name__}','authority':'execution-evidence-only'})
         receipt.pop('receipt_sha256',None)
         receipt.update(run_id=rid,worker_id=worker_id)
         receipt['receipt_sha256']=digest(receipt)
@@ -34,6 +37,9 @@ def execute_one(queue, worker_id):
     except subprocess.TimeoutExpired:
         status='TIMED_OUT'
         receipt={'status':status,'reason':'timeout','authority':'execution-evidence-only','environment_claim':'unattested-worker'}
+    except (OSError, UnicodeError) as exc:
+        status='BLOCKED'
+        receipt={'status':status,'reason':f'runner unavailable: {type(exc).__name__}','authority':'execution-evidence-only','environment_claim':'unattested-worker'}
     return queue.finish(rid,worker_id,status,receipt)
 
 def main():

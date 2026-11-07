@@ -3,7 +3,7 @@ import argparse
 import os
 import time
 from contextlib import closing
-from .core import Lab
+from .core import Lab, WorkspaceUnavailable
 
 def main():
     parser=argparse.ArgumentParser()
@@ -17,6 +17,10 @@ def main():
             row=db.execute("SELECT id FROM runs WHERE status='PENDING' ORDER BY created LIMIT 1").fetchone()
         if row:
             try: lab.execute(row[0],args.workspace)
+            except WorkspaceUnavailable as exc:
+                # Worker environment problem: nothing was claimed, so leave the run PENDING.
+                print(f"worker not claiming runs: {exc}",flush=True)
+                time.sleep(args.interval)
             except (ValueError,KeyError,OSError,RuntimeError) as exc:
                 print(f"worker rejected {row[0]}: {exc}",flush=True)
                 try: lab.reject(row[0], str(exc))
