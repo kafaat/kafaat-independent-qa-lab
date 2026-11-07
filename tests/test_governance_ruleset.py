@@ -72,7 +72,20 @@ class RulesetPolicyTests(unittest.TestCase):
         for job_name, file_path in REQUIRED.items():
             with self.subTest(job=job_name):
                 source = (ROOT / file_path).read_text(encoding="utf-8")
-                self.assertRegex(source, r"(?m)^  pull_request:\s*$")
+                if job_name == "ci-gate":
+                    # The gate runs from the base branch (pull_request_target) on
+                    # every PR: only a types list, no path/branch filters, and it
+                    # must cover opened/synchronize/reopened.
+                    trigger = re.search(
+                        r"(?m)^  pull_request_target:\s*\n((?:    .*\n)*)", source)
+                    self.assertIsNotNone(trigger)
+                    self.assertNotRegex(source, r"(?m)^  pull_request:\s*$")
+                    body = trigger.group(1)
+                    self.assertRegex(body, r"^    types: \[[^\]]*\]\s*\n$")
+                    for kind in ("opened", "synchronize", "reopened"):
+                        self.assertIn(kind, body)
+                else:
+                    self.assertRegex(source, r"(?m)^  pull_request:\s*$")
                 self.assertRegex(source, r"(?m)^jobs:\s*$")
                 self.assertRegex(source, rf"(?m)^  {re.escape(job_name)}:\s*$")
                 # A missing conditional job must not silently satisfy required checks.
