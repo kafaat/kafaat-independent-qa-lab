@@ -45,14 +45,56 @@ def execute_one(queue, worker_id):
         receipt={'status':status,'reason':f'runner unavailable: {type(exc).__name__}','authority':'execution-evidence-only','environment_claim':'unattested-worker'}
     return queue.finish(rid,worker_id,status,receipt)
 
+MAX_BACKOFF_S=60
+
+
+def transient_db_errors():
+    """Connection-level database errors to wait out (DNS, refused, dropped)."""
+    try:
+        import psycopg
+    except ImportError:
+        return ()
+    return (psycopg.OperationalError,)
+
+
+def _log(message):
+    print(message, file=sys.stderr, flush=True)
+
+
+def run(queue, worker_id, *, transient=None, sleep=time.sleep, idle_s=2, iterations=None):
+    """Poll forever; wait out transient database errors with capped backoff.
+
+    A transient error before a claim leaves the queue unchanged. One after a
+    claim (while finishing) leaves that job RUNNING for the existing operator
+    reconciliation; the worker keeps serving other jobs instead of exiting,
+    which on Railway exhausted the restart budget and left the service CRASHED.
+    Only the exception type is logged, never the DSN.
+    """
+    transient=transient_db_errors() if transient is None else transient
+    initialised=False
+    failures=0
+    count=0
+    while iterations is None or count<iterations:
+        count+=1
+        try:
+            if not initialised:
+                queue.init()
+                initialised=True
+            idle=execute_one(queue,worker_id) is None
+            failures=0
+        except transient as exc:
+            failures+=1
+            delay=min(MAX_BACKOFF_S,idle_s*(2**min(failures-1,6)))
+            _log(f'pg_worker: database unavailable ({type(exc).__name__}); retry {failures} in {delay}s')
+            sleep(delay)
+            continue
+        if idle:
+            sleep(idle_s)
+
+
 def main():
     dsn=os.environ.get('QA_POSTGRES_DSN')
     if not dsn:raise RuntimeError('QA_POSTGRES_DSN required')
-    queue=PostgresQueue(dsn)
-    queue.init()
-    worker_id=f'{socket.gethostname()}-{uuid.uuid4()}'
-    while True:
-        if execute_one(queue,worker_id) is None:
-            time.sleep(2)
+    run(PostgresQueue(dsn),f'{socket.gethostname()}-{uuid.uuid4()}')
 
 if __name__=='__main__':main()
