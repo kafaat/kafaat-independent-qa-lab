@@ -7,6 +7,7 @@ from pathlib import Path
 import sqlite3
 from contextlib import closing
 import subprocess
+import tempfile
 import time
 import uuid
 
@@ -30,6 +31,32 @@ RECIPES = {
     "python-smoke": ["python3", "-c", "print('qa-smoke-ok')"],
     "python-compile": ["python3", "-m", "compileall", "-q", "qa_lab"],
 }
+
+# A recipe that measures files names its target. `compileall` exits 0 on a missing
+# directory ("Can't list"), so without this the receipt said PASSED for a project whose
+# code was never compiled (independent parity audit, 2026-11-09).
+COMPILE_TARGETS = {"python-compile": "qa_lab"}
+
+
+class TargetUnavailable(ValueError):
+    """The recipe's target is missing, empty or outside the workspace: BLOCKED, never PASSED."""
+
+
+def file_catalogue(workspace, target):
+    """Sorted Python files under ``target`` with a digest over their paths and bytes."""
+    path = Path(workspace) / target
+    if path.is_symlink() or not path.resolve().is_relative_to(Path(workspace).resolve()):
+        raise TargetUnavailable(f"compile target {target!r} escapes the workspace")
+    if not path.is_dir():
+        raise TargetUnavailable(f"compile target {target!r} does not exist in the workspace")
+    files = sorted(
+        item.relative_to(workspace).as_posix() for item in path.rglob("*.py")
+        if item.is_file() and not item.is_symlink() and "__pycache__" not in item.parts)
+    if not files:
+        raise TargetUnavailable(f"compile target {target!r} contains no Python files")
+    entries = [[name, hashlib.sha256((Path(workspace) / name).read_bytes()).hexdigest()]
+               for name in files]
+    return {"target": target, "files": len(files), "sha256": digest(entries)}
 
 def canonical(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -97,9 +124,17 @@ class Lab:
             sha_verified=self._attest_checkout(workspace, sha)
         except (ValueError, OSError) as exc:
             return self._finish_blocked_claim(rid, project, sha, recipe, str(exc))
+        catalogue=None
+        if recipe in COMPILE_TARGETS:
+            try:
+                catalogue=file_catalogue(workspace, COMPILE_TARGETS[recipe])
+            except (TargetUnavailable, OSError) as exc:
+                return self._finish_blocked_claim(rid, project, sha, recipe, str(exc))
         started=time.time()
         try:
-            proc=subprocess.run(RECIPES[recipe],cwd=workspace,capture_output=True,text=True,timeout=min(int(timeout),120),env={"PATH":os.environ.get("PATH","/usr/bin:/bin"),"PYTHONDONTWRITEBYTECODE":"1"})
+            with tempfile.TemporaryDirectory(prefix="qa-pycache-") as pycache:
+                # bytecode goes outside the workspace, so measuring it never edits it
+                proc=subprocess.run(RECIPES[recipe],cwd=workspace,capture_output=True,text=True,timeout=min(int(timeout),120),env={"PATH":os.environ.get("PATH","/usr/bin:/bin"),"PYTHONDONTWRITEBYTECODE":"1","PYTHONPYCACHEPREFIX":pycache})
             status="PASSED" if proc.returncode == 0 else "FAILED"
             code=proc.returncode
             stdout,out_counts=redact_tail(proc.stdout,16000)
@@ -111,7 +146,14 @@ class Lab:
         except (OSError, UnicodeError) as exc:
             status,code,stdout,stderr="BLOCKED",None,"",f"runner unavailable: {type(exc).__name__}"
             redaction=redaction_summary()
-        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"source_sha_verified":sha_verified,"recipe":recipe,"status":status,"exit_code":code,"started_at":started,"finished_at":time.time(),"stdout_tail":stdout,"stderr_tail":stderr,"output_redaction":redaction,"workspace":str(workspace),"environment_claim":"local-unattested","authority":"execution-evidence-only"}
+        if catalogue is not None:
+            try:
+                after=file_catalogue(workspace, COMPILE_TARGETS[recipe])
+            except (TargetUnavailable, OSError):
+                after=None
+            if after != catalogue and status not in ("TIMED_OUT",):
+                status,stderr=("BLOCKED", (stderr+"\n" if stderr else "")+"compile target changed during execution")
+        receipt={"schema_version":"1.0","run_id":rid,"project":project,"source_sha":sha,"source_sha_verified":sha_verified,"recipe":recipe,"status":status,"exit_code":code,"started_at":started,"finished_at":time.time(),"stdout_tail":stdout,"stderr_tail":stderr,"output_redaction":redaction,**({"catalogue":catalogue} if catalogue is not None else {}),"workspace":str(workspace),"environment_claim":"local-unattested","authority":"execution-evidence-only"}
         receipt["sha256"]=digest(receipt)
         with closing(self.connect()) as db, db:
             changed=db.execute("UPDATE runs SET status=?,receipt=? WHERE id=? AND status='RUNNING'",(status,canonical(receipt),rid)).rowcount
