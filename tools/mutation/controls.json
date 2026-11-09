@@ -62,5 +62,21 @@
     "old": "    if changed and ack_change:",
     "new": "    if changed or ack_change:",
     "test": "tests.test_required_checks_gate.CompareTreesTests.test_gate_changes_need_explicit_acknowledgement"
+  },
+  {
+    "id": "compile-missing-target-passes",
+    "guards": "python-compile on a missing target is BLOCKED, never PASSED (parity audit 2026-11-09)",
+    "path": "qa_lab/core.py",
+    "old": "    if not path.is_dir():\n        raise TargetUnavailable(",
+    "new": "    if False:\n        raise TargetUnavailable(",
+    "test": "tests.test_compile_target_truth.CompileTargetTests.test_the_audit_fixture_is_blocked_not_passed"
+  },
+  {
+    "id": "compile-target-change-ignored",
+    "guards": "a compile target changed during execution is BLOCKED",
+    "path": "qa_lab/core.py",
+    "old": "            if after != catalogue and status not in (\"TIMED_OUT\",):",
+    "new": "            if False:",
+    "test": "tests.test_compile_target_truth.CompileTargetTests.test_a_target_changed_during_execution_is_blocked"
   }
 ]
